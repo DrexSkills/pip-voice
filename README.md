@@ -1,26 +1,32 @@
 # Pip
 
-A voice-only AI companion that lives as a constellation of light on a black screen.
-Talk to it out loud and it talks back. There's no chat box.
+Pip is Hassen's voice-only AI companion. It appears as a glowing brain of light on a black screen, wired into a neon network. Talk to it out loud and it answers in a natural human voice. There's no chat box.
+
+## What it does
 
 - **Always listening.** Allow the mic once and Pip keeps the conversation going on its own.
-- **Heartbeat visuals.** Hundreds of drifting dots link up into a living sphere. When Pip speaks it pulses like a heartbeat and lines stretch out from its surface.
-- **Sees your screen.** Tap the eye button, choose a screen or tab, then ask *"what do you see?"* A card pops up with the screenshot and the things Pip noticed, while it describes them out loud.
-- **Powered by Groq** for fast replies (`qwen/qwen3.8-27b`, which handles both talking and seeing).
+- **A brain with four memory lobes.** *Hassen* holds facts about you, *Topics* holds what you've talked about, *Seen* holds what Pip noticed on your screen, and *Plans* holds goals and reminders. A bright core in the middle is Pip's voice. Each lobe grows new dots as it learns. When Pip remembers something, signals race down the synapses to that lobe and a note pops up, then dissolves.
+- **Captions that come and go.** Pip's words appear as it speaks, then scatter into dust. What you said floats up into the brain.
+- **Neon background.** Glowing wires carry LED pulses that flicker with Pip's voice.
+- **Natural voice.** Groq's Orpheus voices replace the robotic browser voice. Say "change your voice" or name a voice (Autumn, Diana, Hannah, Austin, Daniel or Troy) to switch.
+- **Sees your screen.** Tap the eye, pick a screen or tab, then ask "what do you see?"
+- **Memory on every device.** Your memory is end-to-end encrypted with your passphrase and stored in Supabase. Open the site on any computer or phone, type the same passphrase once, and Pip remembers you, and your Groq key comes with it.
 
-## Run it
+## Setup
 
-Open the GitHub Pages link for this repo, or serve `index.html` from any HTTPS host or `localhost`.
-Microphone and screen sharing only work on HTTPS or localhost.
+1. Open https://drexskills.github.io/pip-voice/
+2. First time: choose a memory passphrase (8+ characters) and paste your Groq API key.
+3. On any other device, type the same passphrase. That's all.
+4. In the Groq console, accept the terms for `canopylabs/orpheus-v1-english` if prompted. Without it, Pip falls back to the browser voice.
 
-1. Paste your Groq API key the first time. It's saved in your browser's local storage only, never in this repo.
-2. Tap **Allow microphone and voice**.
-3. Talk.
+Chrome or Edge works best. Safari can talk and listen. Firefox can't do speech recognition.
 
-Works best in Chrome or Edge. Safari can talk and listen. Firefox can't do speech recognition.
+## Privacy
 
-## Notes
+- Memory and your Groq key are encrypted in the browser (AES-GCM, key derived from your passphrase) before upload. The database only ever sees ciphertext, stored under a hash of your passphrase.
+- Nobody can read your memory without the passphrase, and nobody can recover it if you forget it.
+- Use a passphrase you don't use anywhere else.
 
-- Browsers require one tap per page load before a site can play sound, so on return visits you tap **Wake Pip** once.
-- Your Groq key is used directly from the browser. Anyone who uses this page on your computer could read it from local storage, so set a spend limit in the Groq console.
-- To change models, edit `GROQ_MODEL` near the top of the script in `index.html`.
+## Models
+
+`qwen/qwen3.8-27b` for talking and seeing, and `canopylabs/orpheus-v1-english` for the voice. Change them at the top of the script in `index.html`.
