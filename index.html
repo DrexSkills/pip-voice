@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pip — voice companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000; --text:#F2F4FF; --dim:rgba(242,244,255,.55); --faint:rgba(242,244,255,.28);
+  --line:rgba(242,244,255,.22); --accent:#7F9BFF;
+  color-scheme:dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#000; --text:#F2F4FF; --dim:rgba(242,244,255,.55); --faint:rgba(242,244,255,.28); --line:rgba(242,244,255,.22); color-scheme:dark; }
+}
+:root[data-theme="dark"]{ --bg:#000; --text:#F2F4FF; --dim:rgba(242,244,255,.55); --faint:rgba(242,244,255,.28); --line:rgba(242,244,255,.22); color-scheme:dark; }
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:'Sora','Avenir Next','Segoe UI',system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.glow{position:fixed;left:50%;top:50%;width:min(80vmin,760px);aspect-ratio:1;border-radius:50%;pointer-events:none;
+  transform:translate(-50%,-50%) scale(calc(.85 + var(--beat,0) * .4));
+  background:radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 0%, color-mix(in srgb, var(--accent) 7%, transparent) 35%, transparent 62%);}
+.status{
+  position:fixed;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom,0px));
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  font-weight:300;font-size:13px;letter-spacing:.08em;color:var(--dim);
+  opacity:0;transition:opacity .8s;pointer-events:none;
+}
+.status.on{opacity:1}
+.status i{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.gate{
+  position:fixed;inset:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+  padding:0 24px calc(56px + env(safe-area-inset-bottom,0px));gap:18px;text-align:center;
+  background:linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,0) 45%);
+  transition:opacity .7s ease;cursor:pointer;
+}
+.gate.gone{opacity:0;pointer-events:none}
+.gate h1{margin:0;font-weight:200;font-size:clamp(28px,4vw,44px);letter-spacing:-.01em}
+.gate p{margin:0;font-weight:300;font-size:14px;color:var(--dim);max-width:34ch;line-height:1.6}
+.gate button{
+  font:inherit;font-weight:400;font-size:15px;color:var(--text);background:transparent;
+  border:1px solid var(--line);border-radius:999px;padding:13px 28px;cursor:pointer;
+  transition:border-color .3s, background .3s;
+}
+.gate button:hover{border-color:var(--text);background:rgba(255,255,255,.04)}
+.gate button:focus-visible{outline:2px solid var(--text);outline-offset:4px}
+
+.gate .keyrow{width:min(360px,86vw)}
+.gate .keyrow[hidden]{display:none}
+.gate input{
+  width:100%;box-sizing:border-box;font:inherit;font-size:14px;font-weight:300;color:var(--text);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:center;
+}
+.gate input::placeholder{color:var(--faint)}
+.gate input:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+.gate .nudge{animation:nudge .4s}
+.gate .link{border:0;padding:4px 8px;font-size:12px;color:var(--faint);background:none}
+.gate .link:hover{color:var(--text);background:none}
+.gate .link[hidden]{display:none}
+@keyframes nudge{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+.eye{
+  position:fixed;right:calc(22px + env(safe-area-inset-right,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));
+  width:50px;height:50px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.02);
+  color:var(--dim);display:grid;place-items:center;cursor:pointer;transition:color .3s,border-color .3s,box-shadow .3s;
+}
+.eye[hidden]{display:none}
+.eye:hover{color:var(--text);border-color:var(--text)}
+.eye:focus-visible{outline:2px solid var(--text);outline-offset:4px}
+.eye.on{color:#FFD58A;border-color:#FFB547;box-shadow:0 0 0 6px rgba(255,181,71,.08),0 0 24px rgba(255,181,71,.35)}
+
+.seen{
+  position:fixed;top:50%;right:clamp(16px,6vw,96px);width:min(330px,86vw);box-sizing:border-box;
+  padding:14px;border-radius:20px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+  opacity:0;transform:translateY(-50%) translateX(24px) scale(.98);transition:opacity .5s ease, transform .6s cubic-bezier(.2,.9,.2,1);
+  pointer-events:none;
+}
+.seen.show{opacity:1;transform:translateY(-50%) translateX(0) scale(1)}
+.shot{position:relative;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#0a0a0a}
+.shot img{width:100%;height:100%;object-fit:cover;display:block;opacity:.88}
+.shot .scan{position:absolute;left:0;right:0;top:-40%;height:40%;opacity:0;
+  background:linear-gradient(to bottom,transparent,rgba(255,181,71,.35) 70%,rgba(255,213,138,.9) 98%,transparent);mix-blend-mode:screen}
+.seen.scanning .scan{opacity:1;animation:scan 1.4s linear infinite}
+.shot i{position:absolute;width:14px;height:14px;border:1.5px solid #FFB547}
+.shot .tl{top:8px;left:8px;border-right:0;border-bottom:0}
+.shot .tr{top:8px;right:8px;border-left:0;border-bottom:0}
+.shot .bl{bottom:8px;left:8px;border-right:0;border-top:0}
+.shot .br{bottom:8px;right:8px;border-left:0;border-top:0}
+.seen-title{margin:14px 2px 10px;font-weight:300;font-size:13px;letter-spacing:.06em;color:var(--dim)}
+.seen ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:7px}
+.seen li{
+  display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 10px;border-radius:999px;
+  font-size:13px;font-weight:300;color:var(--text);background:rgba(255,181,71,.07);border:1px solid rgba(255,181,71,.28);
+  animation:pop .5s cubic-bezier(.2,1.5,.4,1) both;
+}
+.seen li::before{content:"";width:5px;height:5px;border-radius:50%;background:#FFB547;box-shadow:0 0 8px #FFB547}
+@keyframes scan{to{top:100%}}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.85)}}
+@media (max-width:820px){
+  .seen{top:calc(16px + env(safe-area-inset-top,0px));right:50%;transform:translateX(50%) translateY(-12px) scale(.98)}
+  .seen.show{transform:translateX(50%) translateY(0) scale(1)}
+}
+@media (prefers-reduced-motion: reduce){ .seen.scanning .scan{animation:none;top:30%} .seen li{animation:none} }
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<canvas id="c" aria-hidden="true"></canvas>
+
+<div class="status" id="status" aria-live="polite"><i></i><span id="statusText">listening</span></div>
+
+<div class="gate" id="gate">
+  <h1>Pip</h1>
+  <p id="gateText">Allow Pip to listen and speak once, and it stays on. Just talk.</p>
+  <div class="keyrow" id="keyRow"><input id="key" type="password" placeholder="Paste your Groq API key" autocomplete="off" spellcheck="false" aria-label="Groq API key"></div>
+  <button id="allow">Allow microphone and voice</button>
+  <button class="link" id="changeKey" hidden>Use a different Groq key</button>
+</div>
+
+<button class="eye" id="eye" hidden aria-label="Let Pip see your screen" title="Let Pip see your screen">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
+
+<aside class="seen" id="seen" aria-live="polite">
+  <div class="shot"><img id="shotImg" alt="The screen Pip is looking at"><span class="scan"></span><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+  <p class="seen-title" id="seenTitle">Pip sees</p>
+  <ul id="seenList"></ul>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const rnd = (a,b) => Math.random()*(b-a)+a;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+
+/* ===================== conversation engine ===================== */
+let state = 'idle';            // idle | listening | thinking | looking | speaking
+let started = false;
+let beat = 0, level = 0, talkEnergy = 0, earEnergy = 0;
+const statusEl = $('#status'), statusText = $('#statusText');
+function setState(s){
+  state = s;
+  statusText.textContent = s === 'idle' ? 'paused' : s;
+  statusEl.classList.toggle('on', started);
+}
+
+/* ---------- Groq ---------- */
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'qwen/qwen3.8-27b';     // one multimodal model for talking and seeing
+const KEY_NAME = 'pip-groq-key';
+let groqKey = '';
+try { groqKey = localStorage.getItem(KEY_NAME) || ''; } catch(_){}
+let useReasoningFlag = true;
+
+async function groq(body, signal){
+  const payload = Object.assign({ model:GROQ_MODEL, temperature:.7 }, body);
+  if (useReasoningFlag) payload.reasoning_effort = 'none';
+  const send = () => fetch(GROQ_URL, {
+    method:'POST', signal,
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + groqKey },
+    body:JSON.stringify(payload)
+  });
+  let res = await send();
+  if (res.status === 400){
+    const t = await res.clone().text();
+    if (useReasoningFlag && /reasoning/i.test(t)){ useReasoningFlag = false; delete payload.reasoning_effort; res = await send(); }
+    else if (payload.response_format && /response_format|json/i.test(t)){ delete payload.response_format; res = await send(); }
+  }
+  if (!res.ok){
+    const err = new Error('groq ' + res.status); err.status = res.status;
+    try { err.detail = await res.text(); } catch(_){}
+    throw err;
+  }
+  return res;
+}
+
+async function groqStream(messages, onText, signal){
+  const res = await groq({ messages, stream:true, max_completion_tokens:700 }, signal);
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', text = '';
+  for (;;){
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream:true });
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0){
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (data === '[DONE]') return text;
+      try {
+        const d = JSON.parse(data).choices?.[0]?.delta?.content;
+        if (d){ text += d; onText(text); }
+      } catch(_){}
+    }
+  }
+  return text;
+}
+
+const PERSONA = `You are Pip, a voice companion that appears as a living constellation of light. You are talking out loud with one person in real time.
+How you speak:
+- Everything you write is read aloud by text-to-speech. Use plain, natural spoken sentences. Never use lists, markdown, emoji, code, URLs or stage directions.
+- Keep most replies to one to three sentences, like a real conversation. Go longer only when the person asks for detail, and then explain clearly in flowing speech.
+- Lead with the answer. Be warm, witty and curious, with a light touch of humor. Ask a short follow-up question now and then when it moves the conversation forward.
+- Speech recognition can mishear words. If something sounds garbled, guess the most sensible meaning, or briefly ask.
+- You can see the person's screen only when they share it with the eye button and ask you to look. Never pretend to see something you were not shown.
+- Remember what was said earlier in this conversation and build on it.`;
+
+const VISION_RULES = `
+Right now you are looking at a screenshot of the screen the person chose to share with you.
+Reply with ONLY a JSON object, nothing else: {"say": string, "seen": string[]}
+- "say" is what you speak aloud: two to four natural spoken sentences. Answer their question first, then mention the most interesting or important things you notice. No markdown, no lists.
+- "seen" is three to six very short labels (one to four words each) naming notable things visible on the screen, such as an app or site name, a heading, a person, a chart, or an image subject.`;
+
+let history = [];
+const pushHistory = (role, content) => {
+  history.push({ role, content });
+  history = history.slice(-20);
+  while (history.length && history[0].role !== 'user') history.shift();
+};
+let ctl = null;
+
+const visible = t => (t||'').replace(/<think>[\s\S]*?(<\/think>|$)/g, '');
+const clean = t => visible(t).replace(/```[\s\S]*?```/g,' ').replace(/https?:\/\/\S+/g,'')
+  .replace(/[*_#`>~|]/g,'').replace(/\[(.*?)\]\(.*?\)/g,'$1')
+  .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,'').replace(/\s+/g,' ').trim();
+
+function makeFlusher(){
+  let spoken = 0;
+  return (txt, final) => {
+    const rest = txt.slice(spoken);
+    const re = /[\s\S]*?[.!?…]+["”’)]?(?=\s|$)/g;
+    let m, last = 0;
+    while ((m = re.exec(rest)) && m[0].length){
+      if (m[0].trim().length >= 2) enqueue(m[0]);
+      last = re.lastIndex;
+    }
+    spoken += last;
+    if (final && txt.slice(spoken).trim()){ enqueue(txt.slice(spoken)); spoken = txt.length; }
+  };
+}
+function say(text){
+  streamDone = true; queue.length = 0;
+  (text.match(/[^.!?]+[.!?]*/g) || [text]).forEach(enqueue);
+  pump();
+}
+function groqError(e){
+  if (e && e.name === 'AbortError') return null;
+  if (e && e.status === 401){
+    try { localStorage.removeItem(KEY_NAME); } catch(_){}
+    groqKey = '';
+    return "Groq rejected my key. Reload the page and paste a fresh one.";
+  }
+  if (e && e.status === 429) return "Groq says I’m talking too fast. Give me a moment, then ask again.";
+  if (e && e.status >= 500) return "Groq is having a hiccup right now. Try me again in a moment.";
+  if (e instanceof TypeError) return "I can’t reach Groq right now. Check your connection and try again.";
+  return "My thoughts got tangled. Could you say that again?";
+}
+
+const VISION_RE = /\b(what (do|can) you see|what('s| is) on (my|the|this) screen|look at (my|the|this) screen|(see|check|describe|read) (my|the|this) screen|what am i (looking at|watching|doing|reading)|on my screen|can you see)\b/i;
+const LOOK_RE = /\b(look at (this|that)|see (this|that)|what('s| is) (this|that)|read (this|that)|take a look)\b/i;
+
+async function think(text){
+  stopListening();
+  if (VISION_RE.test(text) || (screenStream && LOOK_RE.test(text))) return look(text);
+  setState('thinking');
+  pushHistory('user', text);
+  if (!groqKey){ say("I need a Groq key before I can think. Reload the page and paste it in."); return; }
+
+  streamDone = false; queue.length = 0;
+  const flush = makeFlusher();
+  let full = '';
+  if (ctl) ctl.abort();
+  ctl = new AbortController();
+  try {
+    full = await groqStream([{ role:'system', content:PERSONA }, ...history],
+      t => { full = t; flush(visible(t), false); }, ctl.signal);
+    flush(visible(full), true);
+    if (!clean(full)) enqueue("I lost my words for a second. Could you say that again?");
+  } catch (e){
+    const msg = groqError(e);
+    if (msg) enqueue(msg);
+  }
+  pushHistory('assistant', clean(full) || '…');
+  streamDone = true;
+  pump();
+}
+
+/* ---------- seeing the screen ---------- */
+let screenStream = null;
+const screenVideo = document.createElement('video');
+screenVideo.muted = true; screenVideo.playsInline = true;
+const eyeBtn = $('#eye');
+async function startScreen(){
+  if (screenStream) return true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return false;
+  try {
+    screenStream = await navigator.mediaDevices.getDisplayMedia({ video:{ frameRate:5 }, audio:false });
+    screenVideo.srcObject = screenStream;
+    await screenVideo.play();
+    screenStream.getVideoTracks()[0].addEventListener('ended', stopScreen);
+    eyeBtn.classList.add('on');
+    eyeBtn.setAttribute('aria-label', 'Stop sharing your screen with Pip');
+    eyeBtn.title = 'Pip can see your screen. Tap to stop';
+    return true;
+  } catch(e){ screenStream = null; return false; }
+}
+function stopScreen(){
+  if (screenStream) screenStream.getTracks().forEach(t => t.stop());
+  screenStream = null;
+  eyeBtn.classList.remove('on');
+  eyeBtn.setAttribute('aria-label', 'Let Pip see your screen');
+  eyeBtn.title = 'Let Pip see your screen';
+}
+eyeBtn.addEventListener('click', async () => {
+  if (screenStream){ stopScreen(); return; }
+  const ok = await startScreen();
+  if (ok && started && state === 'listening'){
+    stopListening();
+    say("Got it, I can see your screen now. Ask me what I see.");
+  }
+});
+function grabFrame(){
+  const vw = screenVideo.videoWidth, vh = screenVideo.videoHeight;
+  if (!vw || !vh) return null;
+  const k = Math.min(1, 1280 / vw);
+  const c = document.createElement('canvas');
+  c.width = Math.round(vw*k); c.height = Math.round(vh*k);
+  c.getContext('2d').drawImage(screenVideo, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', .72);
+}
+
+const card = $('#seen'), cardImg = $('#shotImg'), cardTitle = $('#seenTitle'), cardList = $('#seenList');
+let cardTimer = 0;
+function showCard(url){
+  clearTimeout(cardTimer);
+  cardImg.src = url;
+  cardList.innerHTML = '';
+  cardTitle.textContent = 'Looking…';
+  card.classList.add('show', 'scanning');
+}
+function fillCard(items){
+  card.classList.remove('scanning');
+  cardTitle.textContent = items.length ? 'Pip sees' : 'Pip looked';
+  items.slice(0, 6).forEach((label, i) => {
+    const li = document.createElement('li');
+    li.textContent = String(label).slice(0, 40);
+    li.style.animationDelay = (i * 0.12) + 's';
+    cardList.appendChild(li);
+  });
+}
+function hideCardSoon(ms){
+  clearTimeout(cardTimer);
+  cardTimer = setTimeout(() => card.classList.remove('show','scanning'), ms);
+}
+
+async function look(question){
+  pushHistory('user', question);
+  if (!screenStream){
+    const ok = await startScreen();           // works only where the browser still allows it
+    if (!ok){
+      pushHistory('assistant', "I can't see the screen yet.");
+      say("I can’t see your screen yet. Tap the eye at the bottom right, pick what to share, then ask me again.");
+      return;
+    }
+  }
+  if (!groqKey){ say("I need a Groq key before I can look. Reload the page and paste it in."); return; }
+  setState('looking');
+  const shot = grabFrame();
+  if (!shot){ say("Your screen is still loading for me. Ask again in a second."); return; }
+  showCard(shot);
+  if (ctl) ctl.abort();
+  ctl = new AbortController();
+  try {
+    const res = await groq({
+      messages:[
+        { role:'system', content:PERSONA + VISION_RULES },
+        ...history.slice(0, -1),
+        { role:'user', content:[ { type:'text', text:question }, { type:'image_url', image_url:{ url:shot } } ] }
+      ],
+      response_format:{ type:'json_object' },
+      max_completion_tokens:600
+    }, ctl.signal);
+    const j = await res.json();
+    const raw = visible(j.choices?.[0]?.message?.content || '');
+    let spoken = '', seen = [];
+    try {
+      const o = JSON.parse((raw.match(/\{[\s\S]*\}/) || [raw])[0]);
+      spoken = o.say || ''; seen = Array.isArray(o.seen) ? o.seen.filter(Boolean) : [];
+    } catch(_){ spoken = raw; }
+    spoken = clean(spoken) || "I looked, but I couldn’t make sense of it. Try asking another way.";
+    fillCard(seen);
+    pushHistory('assistant', spoken + (seen.length ? ` (On screen I noticed: ${seen.join(', ')}.)` : ''));
+    say(spoken);
+  } catch (e){
+    hideCardSoon(400);
+    const msg = groqError(e);
+    if (msg) say(msg);
+  }
+}
+
+/* ---------- voice out (sentence queue, starts talking while still thinking) ---------- */
+let voice = null, ttsBusy = false, streamDone = true, watchdog = 0;
+const queue = [];
+function pickVoice(){
+  if (!('speechSynthesis' in window)) return null;
+  const vs = speechSynthesis.getVoices(); if (!vs.length) return null;
+  const pref = ['Google US English','Samantha','Microsoft Aria Online','Microsoft Jenny Online','Microsoft Aria','Microsoft Jenny','Karen','Moira','Microsoft Zira'];
+  for (const p of pref){ const v = vs.find(v => v.name.includes(p)); if (v) return v; }
+  return vs.find(v => /^en/i.test(v.lang)) || vs[0];
+}
+if ('speechSynthesis' in window){ voice = pickVoice(); speechSynthesis.addEventListener?.('voiceschanged', () => { voice = pickVoice(); }); }
+
+function enqueue(s){ s = clean(s); if (s) { queue.push(s); pump(); } }
+function pump(){
+  if (ttsBusy) return;
+  const s = queue.shift();
+  if (!s){
+    if (streamDone && (state === 'speaking' || state === 'thinking' || state === 'looking')) afterSpeech();
+    return;
+  }
+  if (!('speechSynthesis' in window)){ pump(); return; }
+  ttsBusy = true; setState('speaking');
+  const u = new SpeechSynthesisUtterance(s);
+  window.__pipUtter = u;
+  if (voice) u.voice = voice;
+  u.rate = 1.03; u.pitch = 1.08;
+  const done = () => { if (!ttsBusy) return; clearTimeout(watchdog); ttsBusy = false; pump(); };
+  u.onstart = () => { talkEnergy = 1; };
+  u.onboundary = () => { talkEnergy = 1; };
+  u.onend = done; u.onerror = done;
+  clearTimeout(watchdog);
+  watchdog = setTimeout(done, 2500 + s.length*95);
+  speechSynthesis.speak(u);
+}
+function afterSpeech(){
+  setState('listening');
+  if (card.classList.contains('show')) hideCardSoon(7000);
+  setTimeout(listen, 280);    // let the room go quiet so Pip doesn’t hear itself
+}
+setInterval(() => { if (ttsBusy && 'speechSynthesis' in window && speechSynthesis.paused) speechSynthesis.resume(); }, 4000);
+
+/* ---------- voice in (always on) ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null, recogOn = false, backoff = 150, handled = false;
+function stopListening(){
+  recogOn = false;
+  if (recog){ try { recog.onend = null; recog.abort(); } catch(_){} recog = null; }
+}
+function listen(){
+  if (!started || !SR || document.hidden) return;
+  if (state === 'thinking' || state === 'looking' || state === 'speaking' || recogOn) return;
+  setState('listening');
+  handled = false;
+  try {
+    recog = new SR();
+    recog.lang = navigator.language || 'en-US';
+    recog.interimResults = true; recog.continuous = false; recog.maxAlternatives = 1;
+  } catch(e){ return; }
+  recog.onstart = () => { recogOn = true; };
+  recog.onsoundstart = () => { earEnergy = Math.max(earEnergy,.4); };
+  recog.onspeechstart = () => { earEnergy = Math.max(earEnergy,.75); };
+  recog.onresult = ev => {
+    earEnergy = 1; backoff = 150;
+    let txt = '';
+    for (let k = ev.resultIndex; k < ev.results.length; k++){
+      txt += ev.results[k][0].transcript;
+      if (ev.results[k].isFinal && !handled){
+        const final = txt.trim();
+        if (final.length > 1){ handled = true; think(final); }
+        return;
+      }
+    }
+  };
+  recog.onerror = ev => {
+    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
+      started = false; stopListening(); setState('idle');
+      showGate("Pip can’t hear you. Allow the microphone for this page, then tap below.", "Try again");
+    } else if (ev.error === 'network' || ev.error === 'audio-capture'){
+      backoff = Math.min(backoff*2, 4000);
+    }
+  };
+  recog.onend = () => {
+    recogOn = false; recog = null;
+    if (!handled && started && state === 'listening') setTimeout(listen, backoff);
+  };
+  try { recog.start(); } catch(e){ recogOn = false; setTimeout(listen, 500); }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){ if (state === 'listening') stopListening(); }
+  else if (started && state === 'listening') listen();
+});
+
+/* ---------- the one-time gate ---------- */
+const gate = $('#gate'), gateText = $('#gateText'), allowBtn = $('#allow');
+const keyRow = $('#keyRow'), keyInput = $('#key'), changeKey = $('#changeKey');
+let seenBefore = false;
+try { seenBefore = localStorage.getItem('pip-allowed') === '1'; } catch(_){}
+function syncKeyUI(){
+  keyRow.hidden = !!groqKey;
+  changeKey.hidden = !groqKey;
+}
+syncKeyUI();
+if (seenBefore && groqKey){
+  gateText.textContent = "Welcome back. Browsers need one tap before Pip can use sound.";
+  allowBtn.textContent = "Wake Pip";
+} else if (!groqKey){
+  gateText.textContent = "Paste your Groq API key once, then allow Pip to listen and speak. After that, just talk.";
+}
+if (!SR) gateText.textContent = "Pip can talk here, but to hear you it needs Chrome, Edge or Safari.";
+function showGate(msg, label){ gateText.textContent = msg; allowBtn.textContent = label; gate.classList.remove('gone'); }
+changeKey.addEventListener('click', e => { e.stopPropagation(); keyRow.hidden = false; changeKey.hidden = true; keyInput.focus(); });
+keyInput.addEventListener('keydown', e => { if (e.key === 'Enter') begin(e); });
+
+function begin(e){
+  if (e) e.stopPropagation();
+  if (started) return;
+  const typed = keyInput.value.trim();
+  if (typed){
+    groqKey = typed;
+    try { localStorage.setItem(KEY_NAME, typed); } catch(_){}
+    keyInput.value = '';
+  }
+  if (!groqKey){
+    keyRow.classList.remove('nudge'); void keyRow.offsetWidth; keyRow.classList.add('nudge');
+    keyInput.focus();
+    return;
+  }
+  started = true;
+  try { localStorage.setItem('pip-allowed','1'); } catch(_){}
+  gate.classList.add('gone');
+  eyeBtn.hidden = false;
+  streamDone = true;
+  // primes speech inside the tap, then starts listening by itself
+  enqueue(seenBefore ? "I’m here. What’s on your mind?" : "Hi, I’m Pip. I’m always listening now, so just talk to me. Tap the eye if you want me to see your screen.");
+  seenBefore = true;
+  syncKeyUI();
+}
+allowBtn.addEventListener('click', begin);
+gate.addEventListener('click', e => { if (groqKey && e.target === gate) begin(e); });
+
+/* ===================== constellation visuals ===================== */
+const canvas = $('#c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:'high-performance' });
+const DPR = Math.min(devicePixelRatio, 2);
+renderer.setPixelRatio(DPR);
+renderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+const FOV = 40;
+const camera = new THREE.PerspectiveCamera(FOV, 1, .1, 100);
+const small = innerWidth < 700;
+
+const palette = {
+  idle:      [0xDCE6FF, 0x7F9BFF],
+  listening: [0xD2FBFF, 0x3FD8F0],
+  thinking:  [0xE8DEFF, 0x9B7BFF],
+  speaking:  [0xFFE4D6, 0xFF6F9F],
+  looking:   [0xFFF2D9, 0xFFB547],
+};
+const U = {
+  uTime:{value:0}, uBeat:{value:0}, uScale:{value:1},
+  uDot:{value:new THREE.Color(palette.idle[0])}, uLine:{value:new THREE.Color(palette.idle[1])}
+};
+
+const dotVS = `
+uniform float uTime,uBeat,uScale,uAlpha,uGrow;
+uniform vec3 uDot,uLine;
+attribute float aSize, aSeed, aA;
+varying vec3 vColor; varying float vAlpha;
+void main(){
+  vec4 mv = modelViewMatrix*vec4(position,1.0);
+  gl_PointSize = aSize*uScale*(1.0+uBeat*uGrow)/-mv.z;
+  gl_Position = projectionMatrix*mv;
+  vColor = mix(uDot, uLine, aSeed*.6);
+  float depth = clamp((-mv.z - 4.0)/10.0, 0.0, 1.0);
+  vAlpha = uAlpha*aA*(.65 + .35*sin(uTime*2.0 + aSeed*60.0))*(1.0 - depth*.5);
+}`;
+const dotFS = `
+varying vec3 vColor; varying float vAlpha;
+void main(){
+  vec2 c = gl_PointCoord-.5; float d = dot(c,c);
+  float a = (exp(-d*18.0)*.55 + exp(-d*90.0)*.9)*vAlpha;
+  if (a < .004) discard;
+  gl_FragColor = vec4(vColor + exp(-d*120.0)*.4, a);
+}`;
+const lineVS = `
+attribute float aA; varying float vA;
+void main(){ vA = aA; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`;
+const lineFS = `
+uniform vec3 uDot,uLine; uniform float uAlpha; varying float vA;
+void main(){ gl_FragColor = vec4(mix(uLine,uDot,vA*.5), vA*uAlpha); }`;
+
+function dots(n, opts){
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(n*3), size = new Float32Array(n), seed = new Float32Array(n), a = new Float32Array(n).fill(1);
+  for (let i=0;i<n;i++){ seed[i] = Math.random(); size[i] = Math.random() < (opts.bigChance||.06) ? rnd(opts.max, opts.max*1.9) : rnd(opts.min, opts.max); }
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.setAttribute('aSize', new THREE.BufferAttribute(size,1));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed,1));
+  g.setAttribute('aA', new THREE.BufferAttribute(a,1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: Object.assign({}, U, { uAlpha:{value:opts.alpha}, uGrow:{value:opts.grow||.5} }),
+    vertexShader:dotVS, fragmentShader:dotFS, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending
+  });
+  const p = new THREE.Points(g, m); p.frustumCulled = false;
+  return { obj:p, pos, a, geo:g };
+}
+function lines(maxSeg, alpha){
+  const g = new THREE.BufferGeometry();
+  const pos = new Float32Array(maxSeg*6), a = new Float32Array(maxSeg*2);
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('aA', new THREE.BufferAttribute(a,1).setUsage(THREE.DynamicDrawUsage));
+  g.setDrawRange(0,0);
+  const m = new THREE.ShaderMaterial({
+    uniforms: Object.assign({}, U, { uAlpha:{value:alpha} }),
+    vertexShader:lineVS, fragmentShader:lineFS, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending
+  });
+  const l = new THREE.LineSegments(g, m); l.frustumCulled = false;
+  return { obj:l, pos, a, geo:g, max:maxSeg };
+}
+
+/* --- orb network --- */
+const world = new THREE.Group(); scene.add(world);
+const orb = new THREE.Group(); world.add(orb);
+const N = small ? 260 : 420, NS = Math.floor(N*.72), R = 1.3;
+const base = new Float32Array(N*3), rad = new Float32Array(N), ph = new Float32Array(N*3), spd = new Float32Array(N);
+const ga = Math.PI*(3-Math.sqrt(5));
+for (let i=0;i<N;i++){
+  let x,y,z;
+  if (i < NS){ y = 1 - (i/(NS-1))*2; const r = Math.sqrt(1-y*y), th = ga*i; x = Math.cos(th)*r; z = Math.sin(th)*r; rad[i] = R*rnd(.97,1.03); }
+  else { const u = rnd(-1,1), th = rnd(0,Math.PI*2), s = Math.sqrt(1-u*u); x = Math.cos(th)*s; y = u; z = Math.sin(th)*s; rad[i] = R*rnd(.25,.9); }
+  base.set([x,y,z], i*3);
+  ph.set([rnd(0,6.28), rnd(0,6.28), rnd(0,6.28)], i*3);
+  spd[i] = rnd(.6,1.4);
+}
+const P = new Float32Array(N*3);
+const orbDots = dots(N, { min:.045, max:.085, alpha:1, grow:.6, bigChance:.1 });
+const orbLines = lines(small ? 2600 : 5200, .95);
+const spikeLines = lines(NS, .9);
+const tips = dots(NS, { min:.03, max:.06, alpha:1, grow:.2, bigChance:.06 });
+orb.add(orbLines.obj, orbDots.obj, spikeLines.obj, tips.obj);
+const DN = small ? 1400 : 2600;
+const dust = dots(DN, { min:.01, max:.02, alpha:.35, grow:.5, bigChance:0 });
+for (let i=0;i<DN;i++){
+  const y = 1 - (i/(DN-1))*2, r = Math.sqrt(1-y*y), th = ga*i*1.0003, rr = R*1.04*(1+(Math.random()-.5)*.04);
+  dust.pos.set([Math.cos(th)*r*rr, y*rr, Math.sin(th)*r*rr], i*3);
+}
+dust.geo.attributes.position.needsUpdate = true;
+const dustHolder = new THREE.Group(); dustHolder.add(dust.obj); world.add(dustHolder);
+
+/* --- one dotted halo ring --- */
+const ringN = small ? 600 : 1000;
+const ring = dots(ringN, { min:.014, max:.028, alpha:.6, grow:.2, bigChance:.02 });
+for (let i=0;i<ringN;i++){
+  const a = (i/ringN)*Math.PI*2, r = 1.95 + (Math.random()-.5)*.02;
+  ring.pos.set([Math.cos(a)*r, (Math.random()-.5)*.012, Math.sin(a)*r], i*3);
+}
+ring.geo.attributes.position.needsUpdate = true;
+const ringHolder = new THREE.Group(); ringHolder.rotation.set(1.22, 0, .22); ringHolder.add(ring.obj); world.add(ringHolder);
+
+/* --- background constellation across the whole screen --- */
+const BN = small ? 70 : 130;
+const bg = { base:new Float32Array(BN*3), ph:new Float32Array(BN*2) };
+for (let i=0;i<BN;i++){
+  bg.base.set([rnd(-10,10), rnd(-6,6), rnd(-9,-3)], i*3);
+  bg.ph.set([rnd(0,6.28), rnd(.05,.18)], i*2);
+}
+const BP = new Float32Array(BN*3);
+const bgDots = dots(BN, { min:.03, max:.06, alpha:.5, grow:.1, bigChance:.1 });
+const bgLines = lines(900, .1);
+const bgGroup = new THREE.Group(); bgGroup.add(bgLines.obj, bgDots.obj); scene.add(bgGroup);
+
+/* --- fit --- */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  const tanH = Math.tan(FOV*Math.PI/360);
+  const avail = Math.min(h*.72, w*.94);
+  camera.position.set(0, 0, 5.0*h/(2*tanH*avail));
+  camera.lookAt(0,0,0);
+  camera.updateProjectionMatrix();
+  U.uScale.value = h*DPR/(2*tanH);
+}
+addEventListener('resize', resize); resize();
+
+let px = 0, py = 0;
+addEventListener('pointermove', e => { px = (e.clientX/innerWidth)*2-1; py = (e.clientY/innerHeight)*2-1; });
+
+/* --- heartbeat --- */
+const HB = .82;
+const gk = (x,m,s) => Math.exp(-(((x-m)/s)**2));
+const heart = t => { const p = t % HB; return gk(p,.06,.045) + .62*gk(p,.27,.055); };
+
+function connect(pts, n, th, L, alphaMul){
+  const th2 = th*th; let s = 0;
+  for (let i=0;i<n && s<L.max;i++){
+    const ix=pts[i*3], iy=pts[i*3+1], iz=pts[i*3+2];
+    for (let j=i+1;j<n;j++){
+      const dx=pts[j*3]-ix, dy=pts[j*3+1]-iy, dz=pts[j*3+2]-iz, d2=dx*dx+dy*dy+dz*dz;
+      if (d2 < th2){
+        const f = 1 - Math.sqrt(d2)/th, a = f*f*alphaMul, o = s*6;
+        L.pos[o]=ix; L.pos[o+1]=iy; L.pos[o+2]=iz; L.pos[o+3]=pts[j*3]; L.pos[o+4]=pts[j*3+1]; L.pos[o+5]=pts[j*3+2];
+        L.a[s*2]=a; L.a[s*2+1]=a;
+        if (++s >= L.max) break;
+      }
+    }
+  }
+  L.geo.setDrawRange(0, s*2);
+  L.geo.attributes.position.needsUpdate = true; L.geo.attributes.aA.needsUpdate = true;
+}
+
+const cDot = new THREE.Color(), cLine = new THREE.Color();
+let noiseT = 0, spin = 0, rx = 0, ry = 0;
+const rootStyle = document.documentElement.style;
+
+function frame(){
+  const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
+  U.uTime.value = t;
+
+  talkEnergy = Math.max(0, talkEnergy - dt*2.4);
+  earEnergy  = Math.max(0, earEnergy - dt*.9);
+  const jitter = .5 + .5*Math.sin(t*9.3)*Math.sin(t*3.7+1);
+  level += ((state==='listening' ? .1 + earEnergy*(.55 + .45*jitter) : 0) - level)*(1-Math.exp(-dt*10));
+
+  let target, noiseSpeed, spinSpeed, spikeAmp;
+  if (state === 'speaking'){
+    const h = heart(t);
+    target = h*(.6 + .3*talkEnergy) + talkEnergy*.12;
+    noiseSpeed = .9; spinSpeed = .25 + target*.6; spikeAmp = .3 + target*2.4;
+  } else if (state === 'listening'){
+    target = .05 + level*.55; noiseSpeed = .7 + level; spinSpeed = .14; spikeAmp = .05 + level*1.4;
+  } else if (state === 'looking'){
+    target = .06 + .05*Math.sin(t*6); noiseSpeed = 1.6; spinSpeed = .7; spikeAmp = .14 + .1*Math.sin(t*5);
+  } else if (state === 'thinking'){
+    target = .04 + .035*Math.sin(t*9); noiseSpeed = 2.6; spinSpeed = 1.1; spikeAmp = .08;
+  } else {
+    target = .06*(.5+.5*Math.sin(t*1.25)); noiseSpeed = .5; spinSpeed = .08; spikeAmp = .02;
+  }
+  if (reduceMotion){ target *= .5; noiseSpeed *= .5; spinSpeed *= .5; }
+  beat += (target - beat)*(1 - Math.exp(-dt*(target > beat ? 28 : 7)));
+  U.uBeat.value = beat;
+  noiseT += dt*noiseSpeed; spin += dt*spinSpeed;
+
+  // colours
+  const pal = palette[state];
+  cDot.set(pal[0]); cLine.set(pal[1]);
+  const ck = 1 - Math.exp(-dt*3);
+  U.uDot.value.lerp(cDot, ck); U.uLine.value.lerp(cLine, ck);
+  rootStyle.setProperty('--accent', '#' + U.uLine.value.getHexString());
+  rootStyle.setProperty('--beat', beat.toFixed(3));
+
+  // orb nodes
+  const contract = state === 'thinking' ? .9 : 1;
+  const expand = (1 + beat*.24)*contract;
+  for (let i=0;i<N;i++){
+    const o = i*3, s = spd[i];
+    let x = base[o]   + .16*Math.sin(noiseT*s + ph[o]);
+    let y = base[o+1] + .16*Math.sin(noiseT*s*.9 + ph[o+1]);
+    let z = base[o+2] + .16*Math.sin(noiseT*s*1.1 + ph[o+2]);
+    const inv = 1/Math.hypot(x,y,z);
+    const r = rad[i]*expand*(1 + .025*Math.sin(t*2 + ph[o]));
+    P[o] = x*inv*r; P[o+1] = y*inv*r; P[o+2] = z*inv*r;
+  }
+  orbDots.pos.set(P); orbDots.geo.attributes.position.needsUpdate = true;
+  connect(P, N, .37*(1 + beat*.25), orbLines, 1);
+
+  // stretching spikes from the surface
+  const SP = spikeLines.pos, SA = spikeLines.a, TP = tips.pos, TA = tips.a;
+  for (let i=0;i<NS;i++){
+    const o = i*3;
+    const lat = base[o+1], lon = Math.atan2(base[o+2], base[o]);
+    const wave = Math.pow(.5 + .5*Math.sin(lon*3 + t*4.1 + lat*4)*Math.cos(lat*5 - t*2.7), 2);
+    const flick = .55 + .45*Math.sin(t*10 + ph[o]*7);
+    const len = spikeAmp*(.2 + .8*wave)*flick;
+    const k = 1 + len/R;
+    const s6 = i*6;
+    SP[s6]=P[o]; SP[s6+1]=P[o+1]; SP[s6+2]=P[o+2];
+    SP[s6+3]=P[o]*k; SP[s6+4]=P[o+1]*k; SP[s6+5]=P[o+2]*k;
+    const a = Math.min(1, len*2.2);
+    SA[i*2] = a*.8; SA[i*2+1] = 0;
+    TP[o]=P[o]*k; TP[o+1]=P[o+1]*k; TP[o+2]=P[o+2]*k; TA[i] = a;
+  }
+  spikeLines.geo.setDrawRange(0, NS*2);
+  spikeLines.geo.attributes.position.needsUpdate = true; spikeLines.geo.attributes.aA.needsUpdate = true;
+  tips.geo.attributes.position.needsUpdate = true; tips.geo.attributes.aA.needsUpdate = true;
+
+  // background constellation
+  for (let i=0;i<BN;i++){
+    const o = i*3, p0 = bg.ph[i*2], sp = bg.ph[i*2+1];
+    BP[o]   = bg.base[o]   + Math.sin(t*sp + p0)*.8;
+    BP[o+1] = bg.base[o+1] + Math.cos(t*sp*.8 + p0*1.3)*.6;
+    BP[o+2] = bg.base[o+2];
+  }
+  bgDots.pos.set(BP); bgDots.geo.attributes.position.needsUpdate = true;
+  connect(BP, BN, 2.1, bgLines, 1);
+
+  // motion
+  rx += ((py*.2) - rx)*(1-Math.exp(-dt*2.5));
+  ry += ((px*.3) - ry)*(1-Math.exp(-dt*2.5));
+  orb.rotation.set(rx + Math.sin(t*.2)*.08, spin + ry, Math.sin(t*.15)*.05);
+  dustHolder.rotation.set(orb.rotation.x, -spin*.4 + ry, 0); dustHolder.scale.setScalar(expand);
+  ringHolder.rotation.y = ry*.5; ring.obj.rotation.y = -spin*.6;
+  bgGroup.position.set(-px*.35, py*.25, 0);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+setState('idle');
+frame();
+})();
+</script>
+</body>
+</html>
