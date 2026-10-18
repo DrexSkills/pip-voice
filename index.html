@@ -208,7 +208,7 @@ const LIMITS = { you:24, topics:16, seen:12, plans:16 };
 
 /* ============================== memory ============================== */
 function freshMemory(){
-  return { v:1, name:'Hassen', voice:'autumn', groqKey:'', updated:0, history:[],
+  return { v:1, vv:2, name:'Hassen', voice:'daniel', voiceMode:'british', britishVoice:'', groqKey:'', updated:0, history:[],
     lobes:{ you:[{ t:'His name is Hassen', at:Date.now() }], topics:[], seen:[], plans:[] } };
 }
 function normalize(m){
@@ -218,7 +218,9 @@ function normalize(m){
   out.lobes = Object.assign(freshMemory().lobes, m.lobes || {});
   LOBE_KEYS.forEach(k => { if (!Array.isArray(out.lobes[k])) out.lobes[k] = []; });
   if (!Array.isArray(out.history)) out.history = [];
-  if (!VOICES[out.voice]) out.voice = 'autumn';
+  if (!VOICES[out.voice]) out.voice = 'daniel';
+  if (out.vv !== 2){ out.voiceMode = 'british'; out.britishVoice = ''; out.vv = 2; }
+  if (out.voiceMode !== 'orpheus') out.voiceMode = 'british';
   return out;
 }
 let mem;
@@ -370,6 +372,7 @@ How you talk:
 - Keep most replies to one to three sentences. Go longer only when he asks for detail, and then explain in flowing speech.
 - Lead with the answer. Be witty and curious, and ask a short follow-up question now and then when it helps.
 - Call him Hassen now and then, naturally, not in every reply.
+- You sound like a calm, kind British man: gentle, unhurried and reassuring. Use British spelling and the odd British phrase like "brilliant", "lovely" or "no worries", lightly and never as a caricature.
 - Speech recognition can mishear words. If something sounds garbled, guess the most sensible meaning, or briefly ask.
 - You can only see his screen when he shares it with the eye button and asks you to look. Never pretend to see something.
 - You have a long-term memory that syncs across his devices. Use it naturally. If he asks what you remember, tell him in a friendly way.
@@ -452,6 +455,34 @@ function pickBrowserVoice(){
 }
 if ('speechSynthesis' in window){ browserVoice = pickBrowserVoice(); speechSynthesis.addEventListener?.('voiceschanged', () => { browserVoice = pickBrowserVoice(); }); }
 
+/* British voice: picks the most natural British male voice this device has */
+const FEMALE_RE = /(Libby|Maisie|Sonia|Hazel|Susan|Kate|Serena|Stephanie|Martha|Female|Fiona|Moira|Mia|Bella|Abbi|Hollie|Olivia|Ethel|Emma|Amy|Karen|Tessa)/i;
+function britishVoices(){
+  if (!('speechSynthesis' in window)) return [];
+  const vs = speechSynthesis.getVoices().filter(v => v.name && !/undefined/i.test(v.name));
+  const score = v => {
+    const n = v.name; let s = 0;
+    if (/(Ryan|Thomas).*Natural/i.test(n)) s += 120;
+    else if (/Natural|Neural/i.test(n)) s += 70;
+    if (/(Premium|Enhanced)/i.test(n)) s += 60;
+    if (/\b(Arthur|Jamie|Daniel|Oliver|Malcolm|Ryan|Thomas|Elliot|Noah|Alfie|George)\b/i.test(n)) s += 30;
+    if (/Google UK English Male/i.test(n)) s += 20;
+    if (FEMALE_RE.test(n)) s -= 300;
+    if (!v.localService) s += 4;
+    return s;
+  };
+  return vs.filter(v => /en[-_]GB/i.test(v.lang) || /United Kingdom|UK English|British/i.test(v.name))
+    .map(v => ({ v, s:score(v) })).filter(x => x.s > -100).sort((a,b) => b.s - a.s).map(x => x.v);
+}
+function britishVoice(){
+  const list = britishVoices();
+  if (!list.length) return null;
+  if (mem.britishVoice){ const want = list.find(v => v.name === mem.britishVoice || v.name.toLowerCase().includes(mem.britishVoice.toLowerCase())); if (want) return want; }
+  return list[0];
+}
+const shortName = v => { if (!v || /^Google/i.test(v.name)) return ''; const m = v.name.match(/^(?:Microsoft )?([A-Z][a-z]+)/); return m ? m[1] : ''; };
+function useOrpheus(){ return mem.voiceMode === 'orpheus' || !britishVoice(); }
+
 function chunkForTTS(text){
   const parts = [];
   splitSentences(text).forEach(s => {
@@ -468,14 +499,15 @@ function chunkForTTS(text){
 }
 function enqueue(text){
   text = speakable(text); if (!text) return;
-  chunkForTTS(text).forEach(part => speechQ.push({ text:part, audio: ttsMode === 'natural' && actx ? fetchTTS(part) : null }));
+  const orph = useOrpheus() && ttsMode === 'natural' && actx;
+  chunkForTTS(text).forEach(part => speechQ.push({ text:part, audio: orph ? fetchTTS(part) : null }));
   pump();
 }
 async function fetchTTS(text){
   try {
     const r = await fetch(GROQ + '/audio/speech', { method:'POST',
       headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + mem.groqKey },
-      body:JSON.stringify({ model:TTS_MODEL, voice:mem.voice, input:text, response_format:'wav' }) });
+      body:JSON.stringify({ model:TTS_MODEL, voice:mem.voice, input:('[calm] ' + text).slice(0, 199), response_format:'wav' }) });
     if (!r.ok){ ttsFailed(r.status, await r.text().catch(() => '')); return null; }
     const ab = await r.arrayBuffer();
     ttsFails = 0;
@@ -522,8 +554,9 @@ function speakBrowser(text){
     if (!('speechSynthesis' in window)){ setTimeout(resolve, est*1000); return; }
     const u = new SpeechSynthesisUtterance(text);
     window.__pipUtter = u;
-    if (browserVoice) u.voice = browserVoice;
-    u.rate = 1.02; u.pitch = 1.02;
+    const bv = britishVoice();
+    if (bv){ u.voice = bv; u.lang = bv.lang; u.rate = /Natural|Neural|Premium|Enhanced/i.test(bv.name) ? .94 : .9; u.pitch = .92; }
+    else { if (browserVoice) u.voice = browserVoice; u.rate = .95; u.pitch = .95; }
     let done = false; const fin = () => { if (!done){ done = true; clearTimeout(w); resolve(); } };
     const w = setTimeout(fin, 3000 + text.length*95);
     u.onstart = () => { talkEnergy = 1; }; u.onboundary = () => { talkEnergy = 1; };
@@ -604,16 +637,32 @@ const VISION_RE = /\b(what (do|can) you see|what('s| is) on (my|the|this) screen
 const LOOK_RE = /\b(look at (this|that)|see (this|that)|what('s| is) (this|that)|read (this|that)|take a look)\b/i;
 
 function voiceCommand(text){
-  if (text.length > 90 || !/\bvoice\b/i.test(text) || !/\b(change|switch|use|try|different|another|new|male|female|man|woman|guy|girl|deeper|softer)\b/i.test(text)) return false;
-  const names = Object.keys(VOICES);
-  let v = names.find(n => new RegExp('\\b' + n + '\\b', 'i').test(text));
-  if (!v){
-    let want = /\b(male|man|guy|deeper)\b/i.test(text) ? 'm' : /\b(female|woman|girl|softer)\b/i.test(text) ? 'f' : null;
-    const pool = names.filter(n => n !== mem.voice && (!want || VOICES[n] === want));
-    v = pool[(names.indexOf(mem.voice) + 1) % pool.length] || pool[0];
+  if (text.length > 100 || !/\b(voice|accent)\b/i.test(text)) return false;
+  if (!/\b(change|switch|use|try|different|another|new|british|english|uk|american|natural|deeper|calmer|go back)\b/i.test(text)) return false;
+  const brits = britishVoices();
+  const orphNames = Object.keys(VOICES);
+  const namedOrph = orphNames.find(n => new RegExp('\\b' + n + '\\b', 'i').test(text) && !brits.some(v => new RegExp('\\b' + n + '\\b','i').test(v.name)));
+  const namedBrit = brits.find(v => { const n = shortName(v); return n && new RegExp('\\b' + n + '\\b', 'i').test(text); });
+  if (/\b(american|us accent)\b/i.test(text) || (namedOrph && !namedBrit)){
+    mem.voiceMode = 'orpheus';
+    if (namedOrph) mem.voice = namedOrph;
+    saveMemory();
+    say("Alright Hassen, switching to my American voice. How’s this?");
+    return true;
   }
-  mem.voice = v; saveMemory();
-  say(ttsMode === 'natural' ? "Alright Hassen, how’s this? This is my new voice." : "Got it. I’ll use that voice once my natural voice is available again.");
+  if (!brits.length){
+    say("This device doesn’t have a British voice I can use. Open me in Microsoft Edge and you’ll hear a proper British one.");
+    return true;
+  }
+  if (namedBrit) mem.britishVoice = namedBrit.name;
+  else if (mem.voiceMode === 'british' && brits.length > 1){
+    const cur = britishVoice(), i = brits.indexOf(cur);
+    mem.britishVoice = brits[(i + 1) % brits.length].name;
+  }
+  mem.voiceMode = 'british';
+  saveMemory();
+  const nm = shortName(britishVoice());
+  say(`Right then, Hassen. ${nm ? 'This is ' + nm + '.' : 'Here’s my British voice.'} How does this sound?`);
   return true;
 }
 
@@ -859,6 +908,15 @@ function begin(){
   streamDone = true;
   const h = new Date().getHours();
   const hello = h < 5 ? 'Hey Hassen, you’re up late.' : h < 12 ? 'Good morning, Hassen.' : h < 18 ? 'Hey Hassen, good afternoon.' : 'Good evening, Hassen.';
+  setTimeout(() => {
+    const bv = britishVoice();
+    if (mem.voiceMode === 'british' && bv){
+      const good = /Natural|Neural|Premium|Enhanced/i.test(bv.name);
+      note(good ? `Voice: ${bv.name.replace(/ - English.*$/,'')}` : `Voice: ${bv.name}. For the most natural British voice, open Pip in Microsoft Edge.`, good ? 4000 : 8000);
+    } else if (mem.voiceMode === 'british' && !bv){
+      note('No British voice on this device, so Pip is using its natural voice. Microsoft Edge has the best British voices.', 8000);
+    }
+  }, 1200);
   const known = LOBE_KEYS.reduce((n, k) => n + mem.lobes[k].length, 0);
   say(known > 1 || mem.history.length ? `${hello} ${pick(['Good to hear you again. What’s on your mind?', 'I remember where we left off. What are we doing today?', 'Missed you. What’s up?'])}`
                         : `${hello} I’m Pip. I’ll remember what we talk about, on any device you use. What’s on your mind?`);
