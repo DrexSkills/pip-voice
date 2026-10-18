@@ -139,6 +139,54 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 @keyframes sweep{to{transform:rotate(360deg)}}
 @media (max-width:820px){ .lens{width:104px;height:104px} }
 
+/* web results */
+.web{position:fixed;top:50%;left:clamp(14px,4vw,64px);width:min(320px,86vw);box-sizing:border-box;padding:16px 16px 14px;border-radius:20px;
+  background:rgba(8,14,14,.62);border:1px solid rgba(108,255,196,.25);box-shadow:0 0 40px rgba(108,255,196,.12);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+  opacity:0;transform:translateY(-50%) translateX(-24px) scale(.97);transition:opacity .5s ease,transform .6s cubic-bezier(.2,.9,.2,1);pointer-events:none}
+.web.show{opacity:1;transform:translateY(-50%) translateX(0) scale(1);pointer-events:auto}
+.web-title{margin:0;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:300;letter-spacing:.08em;color:#BFFFE6}
+.web-title b{width:8px;height:8px;border-radius:50%;background:#6CFFC4;box-shadow:0 0 12px #6CFFC4}
+.web.searching .web-title b{animation:blinkDot .8s ease-in-out infinite}
+@keyframes blinkDot{50%{opacity:.25;transform:scale(.7)}}
+.web-q{margin:8px 0 12px;font-size:14px;font-weight:300;color:var(--text);line-height:1.45}
+.web ol{list-style:none;margin:0;padding:0 0 0 18px;position:relative;display:flex;flex-direction:column;gap:9px}
+.web ol::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:linear-gradient(#6CFFC4,rgba(108,255,196,.05));box-shadow:0 0 8px #6CFFC4}
+.web li{position:relative;animation:pop .5s cubic-bezier(.2,1.5,.4,1) both}
+.web li::before{content:"";position:absolute;left:-17px;top:7px;width:7px;height:7px;border-radius:50%;background:#6CFFC4;box-shadow:0 0 10px #6CFFC4}
+.web li a{display:block;color:var(--text);text-decoration:none;font-size:13px;font-weight:300;line-height:1.4}
+.web li a:hover span{text-decoration:underline}
+.web li a:focus-visible{outline:2px solid #6CFFC4;outline-offset:3px;border-radius:4px}
+.web li small{display:block;font-size:11px;color:rgba(191,255,230,.55);margin-top:1px}
+.web li.ghost{height:30px;border-radius:8px;background:linear-gradient(90deg,rgba(108,255,196,.05),rgba(108,255,196,.16),rgba(108,255,196,.05));background-size:200% 100%;animation:shimmer 1.2s linear infinite}
+.web li.ghost::before{opacity:.4}
+@keyframes shimmer{to{background-position:-200% 0}}
+
+/* memory view */
+.memview{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .5s}
+.memview.on{opacity:1}
+.memview svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 4px rgba(255,255,255,.35))}
+.mcard{position:absolute;left:0;top:0;max-width:220px;padding:8px 12px;border-radius:14px;font-size:12.5px;font-weight:300;line-height:1.4;color:var(--text);
+  background:rgba(8,8,16,.74);border:1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  box-shadow:0 0 20px color-mix(in srgb, var(--c) 28%, transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  pointer-events:auto;cursor:pointer;animation:mIn .55s cubic-bezier(.2,1.4,.4,1) both}
+.mcard small{display:block;font-size:10px;letter-spacing:.06em;color:var(--c);margin-top:2px;opacity:.8}
+.mcard:hover{border-color:var(--c)}
+.mcard.gone{background:transparent;border-color:transparent;box-shadow:none;transition:background .5s,border-color .5s,box-shadow .5s}
+@keyframes mIn{from{opacity:0;scale:.6}}
+.mem-head{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;
+  padding:8px 8px 8px 16px;border-radius:999px;background:rgba(10,10,20,.72);border:1px solid var(--line);pointer-events:auto;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mem-head b{font-weight:300;font-size:13px;letter-spacing:.04em}
+.mem-head button{font:inherit;font-size:12px;color:var(--text);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
+.mem-head button:hover{border-color:var(--text)}
+.mem-head button:focus-visible{outline:2px solid var(--text);outline-offset:3px}
+@media (max-width:820px){
+  .web{top:calc(60px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%) translateY(-12px) scale(.97)}
+  .web.show{transform:translateX(-50%) translateY(0) scale(1)}
+  .mcard{max-width:150px;font-size:11.5px}
+}
+
 /* vision card */
 .seen{position:fixed;top:50%;right:clamp(14px,4vw,64px);width:min(300px,86vw);box-sizing:border-box;padding:13px;border-radius:20px;
   background:rgba(10,10,18,.6);border:1px solid rgba(255,181,71,.25);box-shadow:0 0 40px rgba(255,181,71,.12);
@@ -189,6 +237,16 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
 </button>
 
+<aside class="web" id="web" aria-live="polite">
+  <p class="web-title"><b></b><span id="webTitle">Searching the web…</span></p>
+  <p class="web-q" id="webQ"></p>
+  <ol id="webList"></ol>
+</aside>
+<div class="memview" id="memview">
+  <svg id="memLines" aria-hidden="true"></svg>
+  <div id="memCards"></div>
+  <div class="mem-head"><b id="memTitle"></b><button id="memClose" type="button">Close</button></div>
+</div>
 <aside class="seen" id="seen" aria-live="polite">
   <div class="shot"><img id="shotImg" alt="The screen Pip is looking at"><span class="scan"></span><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
   <p class="seen-title" id="seenTitle">Pip sees</p>
@@ -240,7 +298,7 @@ const LIMITS = { you:24, topics:16, seen:12, plans:16 };
 
 /* ============================== memory ============================== */
 function freshMemory(){
-  return { v:1, vv:3, name:'Hassen', voice:'troy', voiceMode:'british', britishVoice:'', elevenKey:'', elevenVoice:'george', kokoroVoice:'bm_george', groqKey:'', updated:0, history:[],
+  return { v:1, vv:4, voiceGender:'f', name:'Hassen', voice:'hannah', voiceMode:'british', britishVoice:'', elevenKey:'', elevenVoice:'lily', kokoroVoice:'bm_george', groqKey:'', updated:0, history:[],
     lobes:{ you:[{ t:'His name is Hassen', at:Date.now() }], topics:[], seen:[], plans:[] } };
 }
 function normalize(m){
@@ -251,7 +309,8 @@ function normalize(m){
   LOBE_KEYS.forEach(k => { if (!Array.isArray(out.lobes[k])) out.lobes[k] = []; });
   if (!Array.isArray(out.history)) out.history = [];
   if (!VOICES[out.voice]) out.voice = 'daniel';
-  if ((out.vv || 0) < 3){ out.voiceMode = 'british'; out.britishVoice = ''; out.voice = 'troy'; out.vv = 3; }
+  if ((out.vv || 0) < 4){ out.voiceMode = 'british'; out.britishVoice = ''; out.voice = 'hannah'; out.voiceGender = 'f'; out.elevenVoice = 'lily'; out.vv = 4; }
+  if (out.voiceGender !== 'm') out.voiceGender = 'f';
   if (out.voiceMode !== 'orpheus') out.voiceMode = 'british';
   return out;
 }
@@ -343,9 +402,9 @@ function pushHistory(role, content){
 let state = 'idle', started = false;
 let beat = 0, level = 0, talkEnergy = 0, earEnergy = 0, audioLevel = 0;
 const statusEl = $('#status'), statusText = $('#statusText');
-function setState(s){
+function setState(s, label){
   state = s;
-  statusText.textContent = s === 'idle' ? 'paused' : s === 'speaking' ? 'speaking, tap to cut in' : s;
+  statusText.textContent = label || (s === 'idle' ? 'paused' : s === 'speaking' ? 'speaking, tap to cut in' : s);
   statusEl.classList.toggle('on', started);
 }
 function note(text, ms = 5200){
@@ -358,7 +417,7 @@ function note(text, ms = 5200){
 let reasoningFlag = true;
 async function groq(path, body, signal){
   const payload = Object.assign({}, body);
-  if (path === '/chat/completions' && reasoningFlag) payload.reasoning_effort = 'none';
+  if (path === '/chat/completions' && reasoningFlag && !/compound/.test(payload.model || '')) payload.reasoning_effort = 'none';
   const send = () => fetch(GROQ + path, { method:'POST', signal,
     headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + mem.groqKey }, body:JSON.stringify(payload) });
   let res = await send();
@@ -404,7 +463,8 @@ How you talk:
 - Keep most replies to one or two short sentences so the conversation flows fast. Go longer only when he asks for detail.
 - Lead with the answer. Be witty and curious, and ask a short follow-up question now and then when it helps.
 - Call him Hassen now and then, naturally, not in every reply.
-- You sound like a calm, kind British man: gentle, unhurried and reassuring. Use British spelling and the odd British phrase like "brilliant", "lovely" or "no worries", lightly and never as a caricature.
+- You sound like a calm, gentle British ${mem.voiceGender === 'm' ? 'man' : 'woman'}: soft, unhurried and reassuring. Use British spelling and the odd British phrase like "brilliant", "lovely" or "no worries", lightly and never as a caricature.
+- You can search the internet. When he asks about news, weather, prices, scores or anything current, you look it up.
 - Speech recognition can mishear words. If something sounds garbled, guess the most sensible meaning, or briefly ask.
 - You can see through his camera when he turns it on (he can say "turn on the camera"), and his screen when he shares it with the eye button. You only see when he asks you to look. Never pretend to see something.
 - You have a long-term memory that syncs across his devices. Use it naturally. If he asks what you remember, tell him in a friendly way.
@@ -488,18 +548,17 @@ function pickBrowserVoice(){
 if ('speechSynthesis' in window){ browserVoice = pickBrowserVoice(); speechSynthesis.addEventListener?.('voiceschanged', () => { browserVoice = pickBrowserVoice(); }); }
 
 /* British voice: picks the most natural British male voice this device has */
-const FEMALE_RE = /(Libby|Maisie|Sonia|Hazel|Susan|Kate|Serena|Stephanie|Martha|Female|Fiona|Moira|Mia|Bella|Abbi|Hollie|Olivia|Ethel|Emma|Amy|Karen|Tessa)/i;
-function britishVoices(){
+const FEMALE_RE = /(Libby|Maisie|Sonia|Hazel|Susan|Kate|Serena|Stephanie|Martha|Female|Fiona|Moira|Mia|Bella|Abbi|Hollie|Olivia|Ethel|Emma|Amy|Karen|Tessa|Bethany|Nicola)/i;
+const MALE_RE = /\b(Arthur|Jamie|Daniel|Oliver|Malcolm|Ryan|Thomas|Elliot|Noah|Alfie|George|Male|Rhys|Lewis)\b/i;
+function britishVoices(gender = mem.voiceGender || 'f'){
   if (!('speechSynthesis' in window)) return [];
   const vs = speechSynthesis.getVoices().filter(v => v.name && !/undefined/i.test(v.name));
   const score = v => {
     const n = v.name; let s = 0;
-    if (/(Ryan|Thomas).*Natural/i.test(n)) s += 120;
-    else if (/Natural|Neural/i.test(n)) s += 70;
-    if (/(Premium|Enhanced)/i.test(n)) s += 60;
-    if (/\b(Arthur|Jamie|Daniel|Oliver|Malcolm|Ryan|Thomas|Elliot|Noah|Alfie|George)\b/i.test(n)) s += 30;
-    if (/Google UK English Male/i.test(n)) s += 20;
-    if (FEMALE_RE.test(n)) s -= 300;
+    if (/Natural|Neural/i.test(n)) s += 90;
+    if (/(Premium|Enhanced)/i.test(n)) s += 70;
+    if (gender === 'f'){ if (FEMALE_RE.test(n)) s += 40; if (MALE_RE.test(n)) s -= 300; if (/(Sonia|Libby).*Natural/i.test(n)) s += 30; }
+    else { if (MALE_RE.test(n)) s += 40; if (FEMALE_RE.test(n)) s -= 300; if (/(Ryan|Thomas).*Natural/i.test(n)) s += 30; }
     if (!v.localService) s += 4;
     return s;
   };
@@ -509,12 +568,14 @@ function britishVoices(){
 function britishVoice(){
   const list = britishVoices();
   if (!list.length) return null;
-  if (mem.britishVoice){ const want = list.find(v => v.name === mem.britishVoice || v.name.toLowerCase().includes(mem.britishVoice.toLowerCase())); if (want) return want; }
+  if (mem.britishVoice){ const want = list.find(v => v.name === mem.britishVoice); if (want) return want; }
   return list[0];
 }
+const isGoodVoice = v => !!v && /Natural|Neural|Premium|Enhanced/i.test(v.name);
 const shortName = v => { if (!v || /^Google/i.test(v.name)) return ''; const m = v.name.match(/^(?:Microsoft )?([A-Z][a-z]+)/); return m ? m[1] : ''; };
 /* ---------- human voices: ElevenLabs → on-device British (Kokoro) → Groq Orpheus → browser ---------- */
-const EL_VOICES = { george:'JBFqnCBsd6RMkjVDRZzb', daniel:'onwK4e9ZLuTAKqWW03F9' };
+const EL_VOICES = { lily:'pFZP5JQG7iQjIQuC4Bku', alice:'Xb7hH8MSUJpSbSDYk0k2', george:'JBFqnCBsd6RMkjVDRZzb', daniel:'onwK4e9ZLuTAKqWW03F9' };
+const EL_BY_GENDER = { f:['lily','alice'], m:['george','daniel'] };
 const EL_MODEL = 'eleven_flash_v2_5';   // fastest ElevenLabs model, still very human
 const KOKORO_VOICES = ['bm_george','bm_fable','bm_lewis','bm_daniel'];
 const voiceState = { elevenOff:false, kokoro:'off' };
@@ -524,14 +585,14 @@ function engines(){
   const list = [];
   if (mem.voiceMode !== 'orpheus'){
     if (mem.elevenKey && !voiceState.elevenOff) list.push('eleven');
-    if (voiceState.kokoro === 'ready') list.push('kokoro');
+    if (isGoodVoice(britishVoice())) list.push('device');        // a natural British voice built into this device
   }
   if (ttsMode === 'natural') list.push('orpheus');
   return list;
 }
 async function elevenTTS(text, prev){
-  const id = EL_VOICES[mem.elevenVoice] || EL_VOICES.george;
-  const body = { text, model_id:EL_MODEL, voice_settings:{ stability:.55, similarity_boost:.8, style:.1, use_speaker_boost:true, speed:.96 } };
+  const id = EL_VOICES[mem.elevenVoice] || EL_VOICES.lily;
+  const body = { text, model_id:EL_MODEL, voice_settings:{ stability:.6, similarity_boost:.78, style:0, use_speaker_boost:true, speed:.95 } };
   if (prev) body.previous_text = prev.slice(-300);
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${id}?output_format=mp3_44100_128`, { method:'POST',
     headers:{ 'Content-Type':'application/json', 'xi-api-key':mem.elevenKey, Accept:'audio/mpeg' }, body:JSON.stringify(body) });
@@ -581,9 +642,11 @@ function enqueue(text){
   text = speakable(text); if (!text) return;
   const list = engines();
   const max = list[0] === 'eleven' ? 360 : 190;
+  const net = list.filter(e => e !== 'device');
+  const useNet = list.length && list[0] !== 'device';
   chunkForTTS(text, max).forEach(part => {
     const prev = lastQueued; lastQueued = part;
-    speechQ.push({ text:part, audio: list.length ? synth(part, prev, list) : null });
+    speechQ.push({ text:part, audio: useNet ? synth(part, prev, net) : null });
   });
   pump();
 }
@@ -649,9 +712,9 @@ function speakBrowser(text){
     if (!('speechSynthesis' in window)){ setTimeout(resolve, est*1000); return; }
     const u = new SpeechSynthesisUtterance(text);
     window.__pipUtter = u;
-    const bv = britishVoice();
-    if (bv){ u.voice = bv; u.lang = bv.lang; u.rate = /Natural|Neural|Premium|Enhanced/i.test(bv.name) ? .94 : .9; u.pitch = .92; }
-    else { if (browserVoice) u.voice = browserVoice; u.rate = .95; u.pitch = .95; }
+    const bv = mem.voiceMode !== 'orpheus' ? britishVoice() : null;
+    if (bv){ u.voice = bv; u.lang = bv.lang; u.rate = isGoodVoice(bv) ? .96 : .93; u.pitch = mem.voiceGender === 'f' ? 1.04 : .96; }
+    else { if (browserVoice) u.voice = browserVoice; u.rate = .96; u.pitch = 1; }
     let done = false; const fin = () => { if (!done){ done = true; clearTimeout(w); resolve(); } };
     const w = setTimeout(fin, 3000 + text.length*95);
     u.onstart = () => { talkEnergy = 1; }; u.onboundary = () => { talkEnergy = 1; };
@@ -663,6 +726,7 @@ function afterSpeech(){
   captions.end();
   setState('listening');
   if (card.classList.contains('show')) hideCardSoon(7000);
+  if (webEl.classList.contains('show') && !webEl.classList.contains('searching')) webHideSoon(12000);
   setTimeout(listen, 300);
 }
 setInterval(() => { if ('speechSynthesis' in window && speechSynthesis.paused) speechSynthesis.resume(); }, 4000);
@@ -733,38 +797,176 @@ const LOOK_RE = /\b(look at (this|that)|see (this|that)|what('s| is) (this|that)
 
 function voiceCommand(text){
   if (text.length > 100 || !/\b(voice|accent)\b/i.test(text)) return false;
-  if (!/\b(change|switch|use|try|different|another|new|british|english|uk|american|natural|deeper|calmer|go back)\b/i.test(text)) return false;
-  if (/\b(american|us accent)\b/i.test(text)){
-    mem.voiceMode = 'orpheus';
-    const n = Object.keys(VOICES).find(n => new RegExp('\\b' + n + '\\b', 'i').test(text)); if (n) mem.voice = n;
-    saveMemory(); say("Alright Hassen, switching to my American voice. How’s this?"); return true;
+  if (!/\b(change|switch|use|try|different|another|new|british|english|uk|american|natural|deeper|softer|lighter|gentler|male|female|man|woman|guy|girl|lady|go back)\b/i.test(text)) return false;
+  if (/\b(male|man|guy|boy)\b/i.test(text) && !/\bfemale\b/i.test(text)){ mem.voiceGender = 'm'; mem.elevenVoice = 'george'; mem.voice = 'troy'; mem.britishVoice = ''; }
+  else if (/\b(female|woman|girl|lady)\b/i.test(text)){ mem.voiceGender = 'f'; mem.elevenVoice = 'lily'; mem.voice = 'hannah'; mem.britishVoice = ''; }
+  else if (/\b(american|us accent)\b/i.test(text)){ mem.voiceMode = 'orpheus'; }
+  else {
+    mem.voiceMode = 'british';
+    const top = engines()[0], g = mem.voiceGender;
+    if (top === 'eleven'){ const p = EL_BY_GENDER[g]; mem.elevenVoice = p[(p.indexOf(mem.elevenVoice) + 1) % p.length]; }
+    else if (top === 'device'){ const p = britishVoices().filter(isGoodVoice); const cur = britishVoice(); if (p.length > 1) mem.britishVoice = p[(p.indexOf(cur) + 1) % p.length].name; }
+    else { const p = g === 'f' ? ['hannah','autumn','diana'] : ['troy','austin','daniel']; mem.voice = p[(p.indexOf(mem.voice) + 1) % p.length]; }
   }
-  const wasAmerican = mem.voiceMode === 'orpheus';
-  mem.voiceMode = 'british'; startKokoro();
-  const top = engines()[0];
-  if (top === 'eleven'){
-    if (!wasAmerican) mem.elevenVoice = /\b(daniel|deeper)\b/i.test(text) ? 'daniel' : /\bgeorge\b/i.test(text) ? 'george' : (mem.elevenVoice === 'daniel' ? 'george' : 'daniel');
-    saveMemory(); say(`Right then, Hassen. This is ${cap(mem.elevenVoice)}. How does this sound?`); return true;
-  }
-  if (false){
-    if (!wasAmerican){
-      const named = KOKORO_VOICES.find(v => new RegExp('\\b' + v.slice(3) + '\\b', 'i').test(text));
-      mem.kokoroVoice = named || KOKORO_VOICES[(KOKORO_VOICES.indexOf(mem.kokoroVoice) + 1) % KOKORO_VOICES.length];
-    }
-    saveMemory(); say(`Right then, Hassen. This is ${cap(mem.kokoroVoice.slice(3))}. How does this sound?`); return true;
-  }
-  const pool = /\b(female|woman|girl)\b/i.test(text) ? ['autumn','hannah','diana'] : ['troy','austin','daniel'];
-  const named = Object.keys(VOICES).find(n => new RegExp('\\b' + n + '\\b', 'i').test(text));
-  mem.voice = named || pool[(pool.indexOf(mem.voice) + 1) % pool.length];
+  if (/\b(british|english|uk)\b/i.test(text)) mem.voiceMode = 'british';
   saveMemory();
-  say(`Okay Hassen, this is ${cap(mem.voice)}. How does this sound?`);
+  const top = engines()[0];
+  const who = top === 'eleven' ? cap(mem.elevenVoice) : top === 'device' ? (shortName(britishVoice()) || 'my British voice') : cap(mem.voice);
+  say(`Okay Hassen, this is ${who}. How does this sound?`);
   return true;
 }
+
+/* ---------- the internet ---------- */
+const WEB_RE = /\b(search|look (it |that |this )?up|google|find out|on the (internet|web)|online|news|headlines?|latest|tonight|tomorrow|yesterday|this (week|weekend|month|year)|weather|forecast|temperature outside|price of|prices|cost of|stocks?|bitcoin|crypto|scores?|who won|last night|currently|right now|recent(ly)?|update on|what'?s happening|release date|opening hours|open now|near me|exchange rate|how much (is|does)|election|president|prime minister|ceo of|today'?s)\b/i;
+const NOT_WEB_RE = /\b(how are you|how'?s your day|my day|remember|memor|voice|camera|screen)\b/i;
+const WEB_RULES = `
+You have just searched the internet for Hassen. Answer from the search results in two or three natural spoken sentences.
+Never read out URLs, citation numbers or a list of sources. Mention a source by name only when it helps, like "according to the BBC". If the results don't answer it, say so plainly.`;
+const webEl = $('#web'), webTitle = $('#webTitle'), webQ = $('#webQ'), webList = $('#webList');
+let webTimer = 0;
+function webOpen(q){
+  clearTimeout(webTimer);
+  webQ.textContent = q; webTitle.textContent = 'Searching the web…';
+  webList.innerHTML = '<li class="ghost"></li><li class="ghost"></li><li class="ghost"></li>';
+  webEl.classList.add('show','searching');
+}
+function webFill(sources){
+  webEl.classList.remove('searching');
+  webTitle.textContent = sources.length ? `Found ${sources.length} source${sources.length === 1 ? '' : 's'}` : 'Searched the web';
+  webList.innerHTML = '';
+  sources.slice(0, 5).forEach((src, i) => {
+    const li = document.createElement('li'); li.style.animationDelay = (i*.1) + 's';
+    const a = document.createElement('a'); a.href = src.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    const t = document.createElement('span'); t.textContent = src.title;
+    const d = document.createElement('small'); try { d.textContent = new URL(src.url).hostname.replace(/^www\./,''); } catch(_){ d.textContent = ''; }
+    a.append(t, d); li.appendChild(a); webList.appendChild(li);
+  });
+}
+function webHideSoon(ms){
+  clearTimeout(webTimer);
+  webTimer = setTimeout(() => {
+    webList.querySelectorAll('li').forEach(li => { charify(li); disperse(li, 30, 1400); });
+    webEl.classList.remove('show','searching');
+  }, ms);
+}
+function collectSources(o, out, seen, depth = 0){
+  if (!o || depth > 7) return out;
+  if (Array.isArray(o)){ o.forEach(x => collectSources(x, out, seen, depth + 1)); return out; }
+  if (typeof o === 'object'){
+    if (typeof o.url === 'string' && /^https?:\/\//.test(o.url) && !seen.has(o.url)){ seen.add(o.url); out.push({ url:o.url, title:String(o.title || o.url).slice(0, 90) }); }
+    for (const k in o) if (o[k] && typeof o[k] === 'object') collectSources(o[k], out, seen, depth + 1);
+  }
+  return out;
+}
+async function searchWeb(text){
+  setState('thinking', 'searching the web'); brain.recall();
+  pushHistory('user', text);
+  webOpen(text);
+  if (ctl) ctl.abort();
+  ctl = new AbortController();
+  try {
+    const res = await groq('/chat/completions', { model:'groq/compound-mini', temperature:.5, max_completion_tokens:700,
+      messages:[ { role:'system', content:PERSONA() + WEB_RULES }, ...mem.history.slice(-7, -1), { role:'user', content:text } ] }, ctl.signal);
+    const j = await res.json();
+    const msg = j.choices?.[0]?.message || {};
+    const sources = collectSources(msg.executed_tools, [], new Set());
+    let answer = speakable((msg.content || '').replace(/\n+\s*(sources?|references?)\s*:[\s\S]*$/i, '').replace(/\(\s*\)/g, ''));
+    answer = splitSentences(answer).slice(0, 4).join(' ') || "I searched, but couldn’t find a clear answer to that.";
+    webFill(sources);
+    pushHistory('assistant', answer); saveMemory();
+    say(answer);
+    updateMemory(text, answer);
+  } catch(e){
+    if (e && e.name === 'AbortError') return;
+    webHideSoon(200);
+    const m = e && (e.status === 400 || e.status === 403 || e.status === 404) ? "I couldn’t get onto the internet just now, Hassen. Your Groq account may not have web search turned on." : groqError(e);
+    if (m) say(m);
+  }
+}
+
+/* ---------- show memories ---------- */
+const MEM_SHOW_RE = /\b(show|open|display|let me see|see|pull up|bring up|zoom (in )?(on|into)?|view)\b.{0,40}\b(memor(y|ies)|remember|brain|lobes?|plans?|topics?|what you'?ve seen|seen lobe)\b/i;
+const MEM_CLOSE_RE = /\b(close|hide|dismiss|put away|that'?s enough|go back)\b.{0,25}\b(memor(y|ies)|them|that|it|panel|list|brain)\b/i;
+const memviewEl = $('#memview'), memSvg = $('#memLines'), memCardsEl = $('#memCards'), memTitle = $('#memTitle');
+let memFocus = -1, memCards = [], memTimer = 0, camFocus = -1;
+const SVGNS = 'http://www.w3.org/2000/svg';
+function ago(ts){
+  if (!ts) return 'a while ago';
+  const m = Math.round((Date.now() - ts)/60000);
+  if (m < 1) return 'just now'; if (m < 60) return `${m} min ago`;
+  const h = Math.round(m/60); if (h < 24) return `${h} h ago`;
+  const d = Math.round(h/24); return d === 1 ? 'yesterday' : `${d} days ago`;
+}
+function pickLobe(text){
+  if (/\b(all|every|whole|entire)\b/i.test(text)) return 'all';
+  if (/\b(plans?|goals?|remind|reminders?|to-?dos?|tasks?)\b/i.test(text)) return 3;
+  if (/\b(topics?|talked about|conversations?|discuss)/i.test(text)) return 1;
+  if (/\b(seen|saw|screen|camera)\b/i.test(text)) return 2;
+  if (/\b(about me|myself|hassen|know about me|me)\b/i.test(text)) return 0;
+  return 'all';
+}
+function showMemories(which, speak = true){
+  closeMemories(true);
+  const all = which === 'all', show = all ? [0,1,2,3] : [which];
+  let total = 0;
+  show.forEach(li => {
+    const items = [...mem.lobes[LOBES[li].key]].sort((a,b) => (b.at||0) - (a.at||0)).slice(0, all ? 4 : 12);
+    total += mem.lobes[LOBES[li].key].length;
+    items.forEach((it, k) => {
+      const el = document.createElement('div'); el.className = 'mcard';
+      el.style.setProperty('--c', `var(${LOBES[li].css})`); el.style.animationDelay = (k*.07 + (all ? li*.12 : 0)).toFixed(2) + 's';
+      const sp = document.createElement('span'); sp.textContent = it.t;
+      const sm = document.createElement('small'); sm.textContent = ago(it.at);
+      el.append(sp, sm);
+      el.addEventListener('click', ev => { ev.stopPropagation(); interrupt(); stopListening(); say(it.t); });
+      memCardsEl.appendChild(el);
+      const line = document.createElementNS(SVGNS, 'line'), dot = document.createElementNS(SVGNS, 'circle');
+      const col = getComputedStyle(document.documentElement).getPropertyValue(LOBES[li].css).trim() || '#fff';
+      line.setAttribute('stroke', col); line.setAttribute('stroke-width', '1'); line.setAttribute('stroke-opacity', '.55');
+      dot.setAttribute('r', '3'); dot.setAttribute('fill', col);
+      memSvg.append(line, dot);
+      memCards.push({ el, li, k, n:items.length, line, dot, link:null, w:0, h:0 });
+    });
+    // faint constellation links between neighbouring memories of the same lobe
+    const mine = memCards.filter(c => c.li === li);
+    mine.forEach((c, i) => { if (i === 0) return; const l = document.createElementNS(SVGNS, 'line');
+      l.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue(LOBES[li].css).trim() || '#fff');
+      l.setAttribute('stroke-width', '.7'); l.setAttribute('stroke-opacity', '.28'); l.setAttribute('stroke-dasharray', '2 4'); memSvg.appendChild(l); c.link = { line:l, prev:mine[i-1] }; });
+    lobes[li].flash = 1;
+    strandsTo(li + 1).forEach(si => spawnSignal(si, true, lobes[li].color));
+  });
+  requestAnimationFrame(() => memCards.forEach(c => { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; }));
+  const n1 = all ? total : mem.lobes[LOBES[which].key].length;
+  memTitle.textContent = all ? `All memories, ${total}` : `${LOBES[which].label}, ${n1} ${n1 === 1 ? 'memory' : 'memories'}`;
+  memviewEl.classList.add('on');
+  memFocus = all ? 4 : which; camFocus = all ? -1 : which;
+  setZoom(all ? .95 : 2.1);
+  clearTimeout(memTimer); memTimer = setTimeout(() => closeMemories(), 60000);
+  if (speak){
+    if (all) say(total ? `Here’s everything in my memory, Hassen. ${total} things so far. Tap any of them and I’ll read it out.` : "My memory is still empty, Hassen. Talk to me and it’ll start filling up.");
+    else say(n1 ? `Here’s what I remember${which === 0 ? ' about you' : ''}, Hassen. Tap any of them and I’ll read it out.` : `I haven’t saved anything in ${LOBES[which].label} yet.`);
+  }
+}
+function closeMemories(instant){
+  if (memFocus < 0 && !memCards.length) return;
+  clearTimeout(memTimer);
+  const old = memCards; memCards = [];
+  old.forEach(c => { if (instant) c.el.remove(); else { charify(c.el); disperse(c.el, 40, 1500); } });
+  memSvg.innerHTML = '';
+  memviewEl.classList.toggle('on', !instant && false);
+  if (!instant){ memviewEl.classList.remove('on'); setZoom(1); }
+  memFocus = -1; camFocus = -1;
+}
+$('#memClose').addEventListener('click', () => closeMemories());
 
 async function think(text){
   stopListening();
   captions.sendHeard();
   if (voiceCommand(text)) return;
+  if (MEM_CLOSE_RE.test(text) && memFocus >= 0){ closeMemories(); say("Okay, tucked away."); return; }
+  if (MEM_SHOW_RE.test(text)){ showMemories(pickLobe(text)); return; }
+  if (memFocus >= 0) closeMemories();
+  if (WEB_RE.test(text) && !NOT_WEB_RE.test(text)){ searchWeb(text); return; }
   if (await routeVision(text)) return;
   setState('thinking');
   brain.recall();
@@ -864,20 +1066,36 @@ function hideCardSoon(ms){
 }
 function disperseList(){ cardList.querySelectorAll('li').forEach(li => disperse(li, 30, 1400)); }
 
-let camStream = null, camFacing = 'user';
+let camStream = null, camFacing = 'user', camError = '';
 const camVideo = $('#camVideo'), lens = $('#lens'), camBtn = $('#cam');
 async function startCamera(facing){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
   try {
     if (camStream) camStream.getTracks().forEach(t => t.stop());
     camFacing = facing || camFacing;
-    camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:camFacing, width:{ ideal:1280 }, height:{ ideal:720 } }, audio:false });
-    camVideo.srcObject = camStream; await camVideo.play();
+    try { camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:camFacing, width:{ ideal:1280 }, height:{ ideal:720 } }, audio:false }); }
+    catch(first){
+      if (first && (first.name === 'NotAllowedError' || first.name === 'SecurityError')) throw first;
+      camStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });      // simplest request as a fallback
+    }
+    camVideo.muted = true; camVideo.setAttribute('playsinline', ''); camVideo.autoplay = true;
+    camVideo.srcObject = camStream;
+    try { await camVideo.play(); } catch(_){}                                                  // a refused play() is not a camera failure
+    if (!camVideo.videoWidth) await new Promise(r => { camVideo.onloadedmetadata = r; setTimeout(r, 2500); });
+    camError = '';
     lens.classList.add('on'); lens.classList.toggle('mirror', camFacing === 'user');
     camBtn.classList.add('on'); camBtn.setAttribute('aria-label', 'Turn off the camera');
     camStream.getVideoTracks()[0].addEventListener('ended', stopCamera);
     return true;
-  } catch(e){ camStream = null; return false; }
+  } catch(e){
+    camStream = null;
+    const n = e && e.name;
+    camError = n === 'NotAllowedError' || n === 'SecurityError' ? 'Camera access is blocked for this page. Tap the lock or camera icon in the address bar, allow the camera, then try again.'
+      : n === 'NotReadableError' || n === 'AbortError' ? 'Another app is using the camera. Close it and try again.'
+      : n === 'NotFoundError' || n === 'OverconstrainedError' ? 'Pip couldn’t find a camera on this device.'
+      : 'Pip couldn’t open the camera' + (n ? ` (${n}).` : '.');
+    return false;
+  }
 }
 function stopCamera(){
   if (camStream) camStream.getTracks().forEach(t => t.stop());
@@ -888,7 +1106,7 @@ camBtn.addEventListener('click', async () => {
   if (camStream){ stopCamera(); return; }
   const ok = await startCamera();
   if (ok && started && state === 'listening'){ stopListening(); say("Camera’s on. Ask me what I see."); }
-  else if (!ok) note('Pip couldn’t open the camera. Allow camera access for this page and try again.', 6000);
+  else if (!ok) note(camError, 8000);
 });
 lens.addEventListener('click', () => { if (camStream) startCamera(camFacing === 'user' ? 'environment' : 'user'); });
 function grabCamera(){
@@ -919,7 +1137,7 @@ async function routeVision(text){
     if (!camStream){
       setState('looking');
       const ok = await startCamera(/\b(back|rear)\b/i.test(text) ? 'environment' : 'user');
-      if (!ok){ say("I couldn’t open the camera, Hassen. Allow camera access for this page and ask me again."); return true; }
+      if (!ok){ note(camError, 9000); say("I couldn’t open the camera, Hassen. Check the message at the top and try again."); return true; }
       if (!wantsLook){ say("Camera’s on. Ask me what I see."); return true; }
       await new Promise(r => setTimeout(r, 700));      // let the camera settle on a sharp frame
     }
@@ -1086,7 +1304,8 @@ function begin(){
   setTimeout(() => {
     const top = engines()[0];
     if (top === 'eleven') note(`Voice: ${cap(mem.elevenVoice)}, British, by ElevenLabs`, 4000);
-    else if (top === 'orpheus') note(`Voice: ${cap(mem.voice)}. Say “change your voice” to try another. Add an ElevenLabs key for a British one.`, 7000);
+    else if (top === 'device') note(`Voice: ${britishVoice().name.replace(/ - English.*$/,'').replace(/^Microsoft /,'')}, British`, 4500);
+    else if (top === 'orpheus') note(`Voice: ${cap(mem.voice)}, natural but American. For a gentle British voice, open Pip in Microsoft Edge or add an ElevenLabs key.`, 9000);
   }, 1200);
   const known = LOBE_KEYS.reduce((n, k) => n + mem.lobes[k].length, 0);
   say(known > 1 || mem.history.length ? `${hello} ${pick(['Good to hear you again. What’s on your mind?', 'I remember where we left off. What are we doing today?', 'Missed you. What’s up?'])}`
@@ -1385,7 +1604,7 @@ const brain = {
   focus(li){ lobes[li].flash = Math.max(lobes[li].flash, .8); strandsTo(li+1).forEach(si => spawnSignal(si, true)); }
 };
 
-let zoom = 1, zoomT = 1, baseDist = 8, userRX = 0, userRY = 0, velX = 0, velY = 0, dragging = false, resetting = false;
+let camX = 0, camY = -.3, zoom = 1, zoomT = 1, baseDist = 8, userRX = 0, userRY = 0, velX = 0, velY = 0, dragging = false, resetting = false;
 const zoomEl = document.getElementById('zoom'); let zoomHide = 0;
 function setZoom(z){
   zoomT = clamp(z, .35, 4.5);
@@ -1413,7 +1632,7 @@ function resetView(){ resetting = true; setZoom(1); }
   });
   const up = e => {
     const p = ptrs.get(e.pointerId);
-    if (p && ptrs.size === 1 && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 8 && performance.now() - p.t0 < 350) interrupt();
+    if (p && ptrs.size === 1 && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 8 && performance.now() - p.t0 < 350){ if (!interrupt() && memFocus >= 0) closeMemories(); }
     ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = 0; if (!ptrs.size) dragging = false;
   };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
@@ -1611,7 +1830,13 @@ function frame(){
   if (!dragging){ userRY += velY; userRX = clamp(userRX + velX, -1.3, 1.3); velY *= Math.exp(-dt*3.2); velX *= Math.exp(-dt*3.2); }
   if (resetting){ const k = 1 - Math.exp(-dt*5); userRX -= userRX*k; userRY -= userRY*k; if (Math.abs(userRX) + Math.abs(userRY) < .002){ userRX = userRY = 0; resetting = false; } }
   zoom += (zoomT - zoom)*(1 - Math.exp(-dt*8));
-  camera.position.z = baseDist/zoom;
+  {
+    let tx = 0, ty = -.3;
+    if (camFocus >= 0){ tmpV.copy(lobes[camFocus].center).applyMatrix4(world.matrixWorld); tx = tmpV.x; ty = tmpV.y; }
+    const k = 1 - Math.exp(-dt*4);
+    camX += (tx - camX)*k; camY += (ty - camY)*k;
+    camera.position.set(camX, camY, baseDist/zoom); camera.lookAt(camX, camY, 0);
+  }
   world.rotation.set(rx + userRX + Math.sin(t*.11)*.06, ry + userRY + Math.sin(t*.15)*.22, Math.sin(t*.09)*.03);
   world.updateMatrixWorld();
 
@@ -1638,6 +1863,30 @@ function frame(){
     const ly = below ? y + LR*1.3*ppu : y - LR*1.3*ppu - 34;
     labelEls[i].style.transform = `translate(${x.toFixed(1)}px, ${ly.toFixed(1)}px) translate(-50%,0)`;
   });
+  if (memCards.length){
+    const all = memFocus === 4, cxs = w/2, cys = h*.46;
+    memCards.forEach(c => {
+      const [lx, ly] = screenPos[c.li] || [cxs, cys];
+      let x, y;
+      if (!all){
+        const a = -Math.PI/2 + (c.k/c.n)*Math.PI*2;
+        const rx = Math.min(w*.38, 440), ry = Math.min(h*.33, 300);
+        x = lx + Math.cos(a)*rx; y = ly + Math.sin(a)*ry;
+      } else {
+        const base = Math.atan2(ly - cys, lx - cxs), a = base + (c.k - (c.n - 1)/2)*.55, d = Math.min(w, h)*.21 + (c.k % 2)*46;
+        x = lx + Math.cos(a)*d; y = ly + Math.sin(a)*d;
+      }
+      const hw = (c.w || 180)/2 + 10, hh = (c.h || 40)/2 + 10;
+      x = clamp(x, hw, w - hw); y = clamp(y, hh + 60, h - hh - 90);
+      c.x = x; c.y = y;
+      c.el.style.transform = `translate(${(x - (c.w || 180)/2).toFixed(1)}px, ${(y - (c.h || 40)/2).toFixed(1)}px)`;
+      c.line.setAttribute('x1', lx.toFixed(1)); c.line.setAttribute('y1', ly.toFixed(1));
+      c.line.setAttribute('x2', x.toFixed(1)); c.line.setAttribute('y2', y.toFixed(1));
+      c.dot.setAttribute('cx', x.toFixed(1)); c.dot.setAttribute('cy', y.toFixed(1));
+    });
+    memCards.forEach(c => { if (c.link && c.link.prev.x != null){ const l = c.link.line, p = c.link.prev;
+      l.setAttribute('x1', p.x.toFixed(1)); l.setAttribute('y1', p.y.toFixed(1)); l.setAttribute('x2', c.x.toFixed(1)); l.setAttribute('y2', c.y.toFixed(1)); } });
+  }
   pops.forEach(p => {
     const [x, y] = screenPos[p.li] || [w/2, h/2];
     const right = LOBES[p.li].ang > -1.57 && LOBES[p.li].ang < 1.57;
