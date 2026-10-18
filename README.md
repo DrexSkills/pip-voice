@@ -10,8 +10,10 @@ Pip is Hassen's voice-only AI companion. It appears as a glowing brain of light 
 - **Thousands of connected dots.** Every lobe is a web of linked nodes filled with glowing dust, and a neural field of drifting dots links the whole brain together.
 - **Zoom and turn.** Scroll or pinch to zoom in and out, drag to spin the brain, and double-tap (or press 0) to reset. The + and - keys zoom too.
 - **Neon background.** Glowing wires carry LED pulses that flicker with Pip's voice.
-- **Human British voice.** With an ElevenLabs key, Pip speaks as George, a warm, calm British man (say "use Daniel" for a deeper one). Without one, Pip downloads a free British voice (Kokoro, about 90 MB, once) that runs on your device. Groq's Orpheus voice covers the gap while it loads. Say "change your voice" to switch, or "use your American voice".
-- **Sees your screen.** Tap the eye, pick a screen or tab, then ask "what do you see?"
+- **Natural voice.** Pip uses Groq's human-sounding Orpheus voices (default: Troy, light and friendly). Say "change your voice" to try Austin or Daniel. Add an ElevenLabs key on the start screen for a human British voice (George).
+- **Sees through your camera.** Say "turn on the camera" or "look at me", or tap the camera button. A round live preview appears, and Pip describes you, what you're holding, or the room. Tap the preview, or say "switch to the back camera", to flip cameras. Say "turn off the camera" to stop.
+- **Sees your screen.** Tap the eye, pick a screen or tab, then ask "what's on my screen?"
+- **Cut in any time.** Tap anywhere (or press Esc) while Pip is talking and it stops and listens.
 - **Memory on every device.** Your memory is end-to-end encrypted with your passphrase and stored in Supabase. Open the site on any computer or phone, type the same passphrase once, and Pip remembers you, and your Groq key comes with it.
 
 ## Setup
