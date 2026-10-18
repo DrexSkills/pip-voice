@@ -10,7 +10,7 @@ Pip is Hassen's voice-only AI companion. It appears as a glowing brain of light 
 - **Thousands of connected dots.** Every lobe is a web of linked nodes filled with glowing dust, and a neural field of drifting dots links the whole brain together.
 - **Zoom and turn.** Scroll or pinch to zoom in and out, drag to spin the brain, and double-tap (or press 0) to reset. The + and - keys zoom too.
 - **Neon background.** Glowing wires carry LED pulses that flicker with Pip's voice.
-- **Calm British voice.** Pip speaks as a calm British man using the best British voice on your device. Microsoft Edge has the most natural one (Ryan). Say "change your voice" to try another British voice, or "use your American voice" for Groq’s Orpheus voices.
+- **Human British voice.** With an ElevenLabs key, Pip speaks as George, a warm, calm British man (say "use Daniel" for a deeper one). Without one, Pip downloads a free British voice (Kokoro, about 90 MB, once) that runs on your device. Groq's Orpheus voice covers the gap while it loads. Say "change your voice" to switch, or "use your American voice".
 - **Sees your screen.** Tap the eye, pick a screen or tab, then ask "what do you see?"
 - **Memory on every device.** Your memory is end-to-end encrypted with your passphrase and stored in Supabase. Open the site on any computer or phone, type the same passphrase once, and Pip remembers you, and your Groq key comes with it.
 
@@ -19,7 +19,7 @@ Pip is Hassen's voice-only AI companion. It appears as a glowing brain of light 
 1. Open https://drexskills.github.io/pip-voice/
 2. First time: choose a memory passphrase (8+ characters) and paste your Groq API key.
 3. On any other device, type the same passphrase. That's all.
-4. For the best British voice, use Microsoft Edge on Windows or Mac. On iPhone, download an enhanced British voice (Settings, Accessibility, Spoken Content, Voices, English UK) such as Arthur or Jamie.
+4. Optional: for the most human voice, add an ElevenLabs API key on the start screen ("Add an ElevenLabs key"). It syncs, encrypted, with your memory.
 
 Chrome or Edge works best. Safari can talk and listen. Firefox can't do speech recognition.
 

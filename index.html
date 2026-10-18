@@ -154,7 +154,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <canvas id="neon" aria-hidden="true"></canvas>
 <canvas id="c" aria-hidden="true"></canvas>
 
-<div class="brand" aria-hidden="true"><b>Pip</b><span id="sync">memory on this device</span></div>
+<div class="brand" aria-hidden="true"><b>Pip</b><span id="sync">memory on this device</span><span id="voiceLoad"></span></div>
 <div id="labels" aria-hidden="true"></div>
 <div id="pops" aria-hidden="true"></div>
 <div class="caption" id="caption" aria-live="polite"></div>
@@ -182,9 +182,13 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
     <label id="keyRow">Groq API key, only needed the first time
       <input id="key" type="password" autocomplete="off" placeholder="gsk_…" spellcheck="false">
     </label>
+    <label id="elRow" hidden>ElevenLabs API key, optional, for a truly human British voice
+      <input id="el" type="password" autocomplete="off" placeholder="sk_…" spellcheck="false">
+    </label>
     <div class="msg" id="gateMsg" role="alert"></div>
     <button class="go" id="allow" type="submit">Allow microphone and voice</button>
   </form>
+  <button class="link" id="addEleven" hidden>Add an ElevenLabs key for the most human voice</button>
   <button class="link" id="switchPass" hidden>Use a different passphrase</button>
 </div>
 
@@ -211,7 +215,7 @@ const LIMITS = { you:24, topics:16, seen:12, plans:16 };
 
 /* ============================== memory ============================== */
 function freshMemory(){
-  return { v:1, vv:2, name:'Hassen', voice:'daniel', voiceMode:'british', britishVoice:'', groqKey:'', updated:0, history:[],
+  return { v:1, vv:2, name:'Hassen', voice:'daniel', voiceMode:'british', britishVoice:'', elevenKey:'', elevenVoice:'george', kokoroVoice:'bm_george', groqKey:'', updated:0, history:[],
     lobes:{ you:[{ t:'His name is Hassen', at:Date.now() }], topics:[], seen:[], plans:[] } };
 }
 function normalize(m){
@@ -484,26 +488,138 @@ function britishVoice(){
   return list[0];
 }
 const shortName = v => { if (!v || /^Google/i.test(v.name)) return ''; const m = v.name.match(/^(?:Microsoft )?([A-Z][a-z]+)/); return m ? m[1] : ''; };
-function useOrpheus(){ return mem.voiceMode === 'orpheus' || !britishVoice(); }
+/* ---------- human voices: ElevenLabs → on-device British (Kokoro) → Groq Orpheus → browser ---------- */
+const EL_VOICES = { george:'JBFqnCBsd6RMkjVDRZzb', daniel:'onwK4e9ZLuTAKqWW03F9' };
+const EL_MODEL = 'eleven_multilingual_v2';
+const KOKORO_VOICES = ['bm_george','bm_fable','bm_lewis','bm_daniel'];
+const voiceState = { elevenOff:false, kokoro:'idle', kokoroSlow:0 };
+const decodeAudio = ab => new Promise((res, rej) => actx.decodeAudioData(ab, res, rej));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function engines(){
+  const list = [];
+  if (mem.voiceMode !== 'orpheus'){
+    if (mem.elevenKey && !voiceState.elevenOff) list.push('eleven');
+    if (voiceState.kokoro === 'ready') list.push('kokoro');
+  }
+  if (ttsMode === 'natural') list.push('orpheus');
+  return list;
+}
+async function elevenTTS(text, prev){
+  const id = EL_VOICES[mem.elevenVoice] || EL_VOICES.george;
+  const body = { text, model_id:EL_MODEL, voice_settings:{ stability:.55, similarity_boost:.8, style:.1, use_speaker_boost:true, speed:.96 } };
+  if (prev) body.previous_text = prev.slice(-300);
+  const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${id}?output_format=mp3_44100_128`, { method:'POST',
+    headers:{ 'Content-Type':'application/json', 'xi-api-key':mem.elevenKey, Accept:'audio/mpeg' }, body:JSON.stringify(body) });
+  if (!r.ok){
+    const d = await r.text().catch(() => '');
+    if (r.status === 401 || r.status === 403 || /quota|credit/i.test(d)){
+      voiceState.elevenOff = true;
+      note(/quota|credit/i.test(d) ? 'Your ElevenLabs credits have run out, so Pip is using its backup voice.' : 'ElevenLabs didn’t accept the key, so Pip is using its backup voice.', 8000);
+    }
+    return null;
+  }
+  return decodeAudio(await r.arrayBuffer());
+}
 
-function chunkForTTS(text){
+let kWorker = null, kSeq = 0;
+const kWait = new Map(), voiceLoadEl = document.getElementById('voiceLoad');
+function startKokoro(){
+  if (voiceState.kokoro !== 'idle' || typeof Worker === 'undefined' || mem.voiceMode === 'orpheus') return;
+  voiceState.kokoro = 'loading';
+  const src = `import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
+let tts = null, chain = Promise.resolve();
+async function load(){
+  if (!tts) tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype:'q8', device:'wasm',
+    progress_callback: p => { if (p && p.status === 'progress' && /onnx/.test(p.file || '')) self.postMessage({ type:'progress', progress:p.progress }); } });
+  return tts;
+}
+self.onmessage = e => {
+  const m = e.data;
+  chain = chain.then(async () => {
+    try {
+      const t = await load();
+      if (m.type === 'load'){ self.postMessage({ id:m.id, type:'ready' }); return; }
+      const t0 = performance.now();
+      const a = await t.generate(m.text, { voice:m.voice, speed:m.speed });
+      const samples = new Float32Array(a.audio);
+      self.postMessage({ id:m.id, type:'audio', samples, sr:a.sampling_rate, ms:performance.now() - t0 }, [samples.buffer]);
+    } catch(err){ self.postMessage({ id:m.id, type:'error', error:String(err && err.message || err) }); }
+  });
+};`;
+  try { kWorker = new Worker(URL.createObjectURL(new Blob([src], { type:'text/javascript' })), { type:'module' }); }
+  catch(e){ voiceState.kokoro = 'failed'; return; }
+  kWorker.onmessage = e => {
+    const m = e.data;
+    if (m.type === 'progress'){ voiceLoadEl.textContent = `British voice ${Math.round(m.progress || 0)}%`; return; }
+    const w = kWait.get(m.id); if (w){ kWait.delete(m.id); w(m); }
+  };
+  kWorker.onerror = () => { voiceState.kokoro = 'failed'; voiceLoadEl.textContent = ''; kWait.forEach(w => w({ type:'error' })); kWait.clear(); };
+  kCall({ type:'load' }, 240000).then(m => {
+    voiceLoadEl.textContent = '';
+    if (m.type === 'ready'){ voiceState.kokoro = 'ready'; if (started && !(mem.elevenKey && !voiceState.elevenOff)) note('Pip’s British voice is ready.', 4000); }
+    else voiceState.kokoro = 'failed';
+  });
+}
+function kCall(msg, timeout){
+  return new Promise(res => {
+    const id = ++kSeq;
+    const to = setTimeout(() => { kWait.delete(id); res({ type:'timeout' }); }, timeout);
+    kWait.set(id, m => { clearTimeout(to); res(m); });
+    kWorker.postMessage(Object.assign({ id }, msg));
+  });
+}
+function kokoroSlow(){
+  if (++voiceState.kokoroSlow >= 2 && voiceState.kokoro === 'ready'){
+    voiceState.kokoro = 'failed';
+    note('This device is too slow for the on-device British voice, so Pip switched to its backup voice.', 8000);
+  }
+}
+async function kokoroTTS(text){
+  const voice = KOKORO_VOICES.includes(mem.kokoroVoice) ? mem.kokoroVoice : 'bm_george';
+  const m = await kCall({ type:'gen', text, voice, speed:.94 }, 25000);
+  if (m.type !== 'audio'){ if (m.type === 'timeout') kokoroSlow(); return null; }
+  const dur = m.samples.length / m.sr;
+  if (m.ms/1000 > dur*1.3 + .4) kokoroSlow(); else voiceState.kokoroSlow = 0;
+  const buf = actx.createBuffer(1, m.samples.length, m.sr); buf.copyToChannel(m.samples, 0);
+  return buf;
+}
+async function synth(text, prev, list){
+  if (!actx) return null;
+  for (const e of list){
+    if (e === 'eleven' && voiceState.elevenOff) continue;
+    if (e === 'kokoro' && voiceState.kokoro !== 'ready') continue;
+    if (e === 'orpheus' && ttsMode !== 'natural') continue;
+    try {
+      const b = e === 'eleven' ? await elevenTTS(text, prev) : e === 'kokoro' ? await kokoroTTS(text) : await fetchTTS(text);
+      if (b) return b;
+    } catch(_){}
+  }
+  return null;
+}
+
+function chunkForTTS(text, max = 190){
   const parts = [];
   splitSentences(text).forEach(s => {
-    while (s.length > 190){
-      let cut = s.lastIndexOf(', ', 190); if (cut < 60) cut = s.lastIndexOf(' ', 190); if (cut < 40) cut = 190;
+    while (s.length > max){
+      let cut = s.lastIndexOf(', ', max); if (cut < 60) cut = s.lastIndexOf(' ', max); if (cut < 40) cut = max;
       parts.push(s.slice(0, cut + 1).trim()); s = s.slice(cut + 1).trim();
     }
     if (s){
       const last = parts[parts.length - 1];
-      if (last && last.length + s.length < 185 && parts.length) parts[parts.length - 1] = last + ' ' + s; else parts.push(s);
+      if (last && last.length + s.length < max - 5) parts[parts.length - 1] = last + ' ' + s; else parts.push(s);
     }
   });
   return parts;
 }
+let lastQueued = '';
 function enqueue(text){
   text = speakable(text); if (!text) return;
-  const orph = useOrpheus() && ttsMode === 'natural' && actx;
-  chunkForTTS(text).forEach(part => speechQ.push({ text:part, audio: orph ? fetchTTS(part) : null }));
+  const list = engines();
+  const max = list[0] === 'eleven' ? 360 : list[0] === 'kokoro' ? 240 : 190;
+  chunkForTTS(text, max).forEach(part => {
+    const prev = lastQueued; lastQueued = part;
+    speechQ.push({ text:part, audio: list.length ? synth(part, prev, list) : null });
+  });
   pump();
 }
 async function fetchTTS(text){
@@ -642,30 +758,28 @@ const LOOK_RE = /\b(look at (this|that)|see (this|that)|what('s| is) (this|that)
 function voiceCommand(text){
   if (text.length > 100 || !/\b(voice|accent)\b/i.test(text)) return false;
   if (!/\b(change|switch|use|try|different|another|new|british|english|uk|american|natural|deeper|calmer|go back)\b/i.test(text)) return false;
-  const brits = britishVoices();
-  const orphNames = Object.keys(VOICES);
-  const namedOrph = orphNames.find(n => new RegExp('\\b' + n + '\\b', 'i').test(text) && !brits.some(v => new RegExp('\\b' + n + '\\b','i').test(v.name)));
-  const namedBrit = brits.find(v => { const n = shortName(v); return n && new RegExp('\\b' + n + '\\b', 'i').test(text); });
-  if (/\b(american|us accent)\b/i.test(text) || (namedOrph && !namedBrit)){
+  if (/\b(american|us accent)\b/i.test(text)){
     mem.voiceMode = 'orpheus';
-    if (namedOrph) mem.voice = namedOrph;
-    saveMemory();
-    say("Alright Hassen, switching to my American voice. How’s this?");
-    return true;
+    const n = Object.keys(VOICES).find(n => new RegExp('\\b' + n + '\\b', 'i').test(text)); if (n) mem.voice = n;
+    saveMemory(); say("Alright Hassen, switching to my American voice. How’s this?"); return true;
   }
-  if (!brits.length){
-    say("This device doesn’t have a British voice I can use. Open me in Microsoft Edge and you’ll hear a proper British one.");
-    return true;
+  const wasAmerican = mem.voiceMode === 'orpheus';
+  mem.voiceMode = 'british'; startKokoro();
+  const top = engines()[0];
+  if (top === 'eleven'){
+    if (!wasAmerican) mem.elevenVoice = /\b(daniel|deeper)\b/i.test(text) ? 'daniel' : /\bgeorge\b/i.test(text) ? 'george' : (mem.elevenVoice === 'daniel' ? 'george' : 'daniel');
+    saveMemory(); say(`Right then, Hassen. This is ${cap(mem.elevenVoice)}. How does this sound?`); return true;
   }
-  if (namedBrit) mem.britishVoice = namedBrit.name;
-  else if (mem.voiceMode === 'british' && brits.length > 1){
-    const cur = britishVoice(), i = brits.indexOf(cur);
-    mem.britishVoice = brits[(i + 1) % brits.length].name;
+  if (top === 'kokoro'){
+    if (!wasAmerican){
+      const named = KOKORO_VOICES.find(v => new RegExp('\\b' + v.slice(3) + '\\b', 'i').test(text));
+      mem.kokoroVoice = named || KOKORO_VOICES[(KOKORO_VOICES.indexOf(mem.kokoroVoice) + 1) % KOKORO_VOICES.length];
+    }
+    saveMemory(); say(`Right then, Hassen. This is ${cap(mem.kokoroVoice.slice(3))}. How does this sound?`); return true;
   }
-  mem.voiceMode = 'british';
   saveMemory();
-  const nm = shortName(britishVoice());
-  say(`Right then, Hassen. ${nm ? 'This is ' + nm + '.' : 'Here’s my British voice.'} How does this sound?`);
+  if (voiceState.kokoro === 'loading'){ say("My British voice is still downloading, Hassen. Give it a minute and I’ll switch over by myself."); return true; }
+  say("I can’t load my British voice on this device, Hassen. Adding an ElevenLabs key on the start screen gives me a properly human one.");
   return true;
 }
 
@@ -846,10 +960,14 @@ document.addEventListener('visibilitychange', () => {
 /* ============================== gate ============================== */
 const gate = $('#gate'), gateText = $('#gateText'), gateMsg = $('#gateMsg'), allowBtn = $('#allow');
 const passRow = $('#passRow'), keyRow = $('#keyRow'), passIn = $('#pass'), keyIn = $('#key'), switchPass = $('#switchPass');
+const elRow = $('#elRow'), elIn = $('#el'), addEleven = $('#addEleven');
+addEleven.addEventListener('click', () => { elRow.hidden = false; addEleven.hidden = true; elIn.focus(); });
 function layoutGate(){
   const needPass = !passphrase, needKey = !mem.groqKey;
   passRow.hidden = !needPass; keyRow.hidden = !needKey || (needPass && false);
   switchPass.hidden = needPass;
+  elRow.hidden = !(needPass && needKey);
+  addEleven.hidden = !elRow.hidden || !!mem.elevenKey;
   if (!needPass && !needKey){ gateText.textContent = 'Welcome back, Hassen. Browsers need one tap before Pip can use sound.'; allowBtn.textContent = 'Wake Pip'; }
   else if (!needPass && needKey){ gateText.textContent = 'Paste a fresh Groq key to wake Pip. Your memory is safe.'; }
   if (!SR) gateText.textContent += ' To hear you, Pip needs Chrome, Edge or Safari.';
@@ -861,6 +979,7 @@ switchPass.addEventListener('click', () => {
   setSync('local'); layoutGate(); passIn.focus();
 });
 layoutGate();
+if (!mem.elevenKey) setTimeout(startKokoro, 1500);
 if (passphrase){ openVault(passphrase).then(v => { vault = v; return refreshFromCloud(); }).catch(() => setSync('offline')); }
 
 let gateBusy = false;
@@ -896,6 +1015,9 @@ $('#gateForm').addEventListener('submit', async e => {
     gateBusy = false; allowBtn.disabled = false;
   }
   if (key) mem.groqKey = key;
+  const elKey = elIn.value.trim();
+  if (elKey){ mem.elevenKey = elKey; voiceState.elevenOff = false; }
+  elIn.value = '';
   if (!mem.groqKey){ gateMsg.textContent = 'Paste your Groq API key to continue.'; keyRow.hidden = false; nudge(keyRow); keyIn.focus(); return; }
   passIn.value = ''; keyIn.value = '';
   saveMemory(true);
@@ -913,14 +1035,12 @@ function begin(){
   streamDone = true;
   const h = new Date().getHours();
   const hello = h < 5 ? 'Hey Hassen, you’re up late.' : h < 12 ? 'Good morning, Hassen.' : h < 18 ? 'Hey Hassen, good afternoon.' : 'Good evening, Hassen.';
+  startKokoro();
   setTimeout(() => {
-    const bv = britishVoice();
-    if (mem.voiceMode === 'british' && bv){
-      const good = /Natural|Neural|Premium|Enhanced/i.test(bv.name);
-      note(good ? `Voice: ${bv.name.replace(/ - English.*$/,'')}` : `Voice: ${bv.name}. For the most natural British voice, open Pip in Microsoft Edge.`, good ? 4000 : 8000);
-    } else if (mem.voiceMode === 'british' && !bv){
-      note('No British voice on this device, so Pip is using its natural voice. Microsoft Edge has the best British voices.', 8000);
-    }
+    const top = engines()[0];
+    if (top === 'eleven') note(`Voice: ${cap(mem.elevenVoice)}, by ElevenLabs`, 4000);
+    else if (mem.voiceMode !== 'orpheus' && voiceState.kokoro === 'loading') note('Downloading Pip’s British voice, about 90 MB, just this once. Until it’s ready Pip uses its backup voice.', 9000);
+    else if (top === 'kokoro') note(`Voice: ${cap(mem.kokoroVoice.slice(3))}, British, running on your device`, 4000);
   }, 1200);
   const known = LOBE_KEYS.reduce((n, k) => n + mem.lobes[k].length, 0);
   say(known > 1 || mem.history.length ? `${hello} ${pick(['Good to hear you again. What’s on your mind?', 'I remember where we left off. What are we doing today?', 'Missed you. What’s up?'])}`
