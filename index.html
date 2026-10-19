@@ -1954,6 +1954,7 @@ requestAnimationFrame(frame);
     const text = inp.value.trim();
     if (!text) return;
     inp.value = '';
+    if (typeof captions !== 'undefined') captions.heard(text);
     if (typeof think === 'function') think(text);
   }
 
