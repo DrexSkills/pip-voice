@@ -1904,5 +1904,72 @@ setState('idle');
 requestAnimationFrame(frame);
 })();
 </script>
+
+<style>
+#type-bar{
+  position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;
+  width:min(480px,82vw);
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.13);
+  border-radius:999px;
+  padding:8px 8px 8px 18px;
+  backdrop-filter:blur(12px);
+  transition:opacity .3s,transform .3s;
+  z-index:300;
+}
+#type-bar.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(10px)}
+#type-input{
+  flex:1;background:none;border:none;outline:none;
+  font:inherit;font-size:13px;font-weight:300;
+  color:#fff;letter-spacing:.01em;
+  caret-color:rgba(255,255,255,.7);
+}
+#type-input::placeholder{color:rgba(255,255,255,.3)}
+#type-send{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s;
+}
+#type-send:hover{background:rgba(255,255,255,0.22)}
+#type-send svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+
+<div id="type-bar">
+  <input id="type-input" type="text" placeholder="or type here…" autocomplete="off" autocorrect="off" spellcheck="false"/>
+  <button id="type-send" aria-label="Send">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+  </button>
+</div>
+
+<script>
+(function(){
+  const bar = document.getElementById('type-bar');
+  const inp = document.getElementById('type-input');
+  const btn = document.getElementById('type-send');
+
+  function submit(){
+    const text = inp.value.trim();
+    if (!text) return;
+    inp.value = '';
+    if (typeof think === 'function') think(text);
+  }
+
+  btn.addEventListener('click', submit);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); submit(); } });
+
+  // Hide bar while Pip is speaking so it doesn't overlap
+  const orig = window.setState;
+  if (typeof orig === 'function'){
+    window.setState = function(s){
+      orig(s);
+      bar.classList.toggle('hidden', s === 'speaking');
+    };
+  }
+})();
+</script>
 </body>
 </html>
+
